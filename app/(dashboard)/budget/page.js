@@ -61,6 +61,7 @@ export default function BudgetPage() {
   ]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [parserStatus, setParserStatus] = useState(null);
 
   const loadData = async () => {
     const mk = monthKey();
@@ -114,6 +115,7 @@ export default function BudgetPage() {
       });
 
       const parsed = await res.json();
+      setParserStatus({ parser: parsed.parser || null, reason: parsed.parserReason || null });
 
       if (parsed.type === "transaction") {
         const items = Array.isArray(parsed.items) ? parsed.items : [];
@@ -170,6 +172,12 @@ export default function BudgetPage() {
     <div className="max-w-[950px] mx-auto px-5 py-6 grid gap-4 md:grid-cols-[1.4fr_1fr]">
       <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 flex flex-col h-[70vh]">
         <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono mb-3">Budget Chat</div>
+
+        {parserStatus?.parser === "fallback" && (
+          <div className="mb-3 text-xs rounded-lg px-3 py-2 border border-bf-warn/30 bg-bf-warn/10 text-bf-warn">
+            Claude was not used for the last message ({parserStatus.reason === "missing_api_key" ? "missing ANTHROPIC_API_KEY" : "Anthropic request failed"}). Using backup parser.
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto pr-1 space-y-3">
           {chat.map((m, i) => (

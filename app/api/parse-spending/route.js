@@ -2,10 +2,6 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "../../lib/supabase-server";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 function normalizeSlug(s = "") {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -115,11 +111,19 @@ export async function POST(request) {
 
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ ...fallbackParse(message, categories), parser: "fallback" });
+      return NextResponse.json({
+        ...fallbackParse(message, categories),
+        parser: "fallback",
+        parserReason: "missing_api_key",
+      });
     }
 
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest",
       max_tokens: 1000,
       system: `You are a budget assistant. Extract spending from natural language.
 
@@ -155,9 +159,13 @@ Rules:
 
     const parsed = parseJsonFromModelText(text);
 
-    return NextResponse.json({ ...parsed, parser: "claude" });
+    return NextResponse.json({ ...parsed, parser: "claude", parserReason: null });
   } catch (error) {
     console.error("Claude API error:", error);
-    return NextResponse.json({ ...fallbackParse(message, categories), parser: "fallback" }, { status: 200 });
+    return NextResponse.json({
+      ...fallbackParse(message, categories),
+      parser: "fallback",
+      parserReason: "anthropic_error",
+    }, { status: 200 });
   }
 }
