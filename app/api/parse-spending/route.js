@@ -10,6 +10,48 @@ function normalizeSlug(s = "") {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+
+
+const CATEGORY_KEYWORDS = {
+  groceries: ["grocery", "groceries", "supermarket", "food", "produce", "milk", "bread", "coffee"],
+  dining: ["dining", "restaurant", "lunch", "dinner", "cafe", "coffee", "takeout", "uber eats"],
+  gas: ["gas", "fuel", "petrol", "tank", "diesel", "station"],
+  transport: ["bus", "train", "metro", "transit", "uber", "taxi", "lyft"],
+  housing: ["rent", "mortgage", "housing", "landlord", "hoa"],
+  utilities: ["hydro", "electric", "electricity", "water", "internet", "wifi", "utility"],
+  subscriptions: ["subscription", "netflix", "spotify", "prime", "apple", "youtube"],
+};
+
+function keywordScore(text, category) {
+  const haystack = normalizeSlug(text);
+  const slug = normalizeSlug(category.slug || "");
+  const name = normalizeSlug(category.name || "");
+  let score = 0;
+
+  if (haystack.includes(slug)) score += 5;
+  if (haystack.includes(name)) score += 4;
+
+  const keys = [
+    ...(CATEGORY_KEYWORDS[slug] || []),
+    ...(CATEGORY_KEYWORDS[name] || []),
+  ];
+
+  keys.forEach((k) => {
+    if (haystack.includes(normalizeSlug(k))) score += 3;
+  });
+
+  return score;
+}
+
+function pickBestCategory(text, categories = []) {
+  if (!categories.length) return null;
+  const ranked = categories
+    .map((c) => ({ c, score: keywordScore(text, c) }))
+    .sort((a, b) => b.score - a.score);
+
+  return ranked[0].score > 0 ? ranked[0].c : categories[0];
+}
+
 function fallbackParse(message, categories) {
   const msg = String(message || "").trim();
   const lowered = msg.toLowerCase();
@@ -22,25 +64,12 @@ function fallbackParse(message, categories) {
     };
   }
 
-  const normalizedCats = (categories || []).map((c) => ({
-    ...c,
-    nSlug: normalizeSlug(c.slug),
-    nName: normalizeSlug(c.name),
-  }));
-
-  const pickCategory = (context) => {
-    const ctx = normalizeSlug(context);
-    return (
-      normalizedCats.find((c) => ctx.includes(c.nSlug) || ctx.includes(c.nName)) ||
-      normalizedCats[0] ||
-      null
-    );
-  };
+  const normalizedCats = categories || [];
 
   const items = amountMatches.map((m) => {
     const amount = Number(m[1]);
     const slice = lowered.slice(Math.max(0, m.index - 18), Math.min(lowered.length, m.index + 32));
-    const cat = pickCategory(slice);
+    const cat = pickBestCategory(`${msg} ${slice}`, normalizedCats);
     return {
       amount,
       category_slug: cat?.slug || normalizedCats[0]?.slug || "other",
@@ -86,7 +115,7 @@ export async function POST(request) {
 
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json(fallbackParse(message, categories));
+      return NextResponse.json({ ...fallbackParse(message, categories), parser: "fallback" });
     }
 
     const response = await anthropic.messages.create({
@@ -126,9 +155,9 @@ Rules:
 
     const parsed = parseJsonFromModelText(text);
 
-    return NextResponse.json(parsed);
+    return NextResponse.json({ ...parsed, parser: "claude" });
   } catch (error) {
     console.error("Claude API error:", error);
-    return NextResponse.json(fallbackParse(message, categories), { status: 200 });
+    return NextResponse.json({ ...fallbackParse(message, categories), parser: "fallback" }, { status: 200 });
   }
 }

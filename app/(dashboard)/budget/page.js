@@ -14,6 +14,44 @@ const fmt = (n) =>
     maximumFractionDigits: 2,
   })}`;
 
+
+const CATEGORY_KEYWORDS = {
+  groceries: ["grocery", "groceries", "supermarket", "food", "produce", "coffee"],
+  dining: ["restaurant", "dining", "lunch", "dinner", "cafe", "coffee", "takeout"],
+  gas: ["gas", "fuel", "tank", "petrol", "diesel"],
+  housing: ["rent", "mortgage", "housing", "landlord"],
+  subscriptions: ["subscription", "netflix", "spotify", "prime"],
+};
+
+const normalize = (v = "") => String(v).toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const findBestCategory = (categories, text, preferredSlug) => {
+  if (!categories.length) return null;
+
+  const pref = normalize(preferredSlug);
+  const exact = categories.find((c) => normalize(c.slug) === pref);
+  if (exact) return exact;
+
+  const hay = normalize(text);
+  const scored = categories.map((c) => {
+    const slug = normalize(c.slug);
+    const name = normalize(c.name);
+    let score = 0;
+    if (pref && (slug.includes(pref) || pref.includes(slug))) score += 3;
+    if (hay.includes(slug)) score += 5;
+    if (hay.includes(name)) score += 4;
+
+    const words = [...(CATEGORY_KEYWORDS[slug] || []), ...(CATEGORY_KEYWORDS[name] || [])];
+    words.forEach((w) => {
+      if (hay.includes(normalize(w))) score += 2;
+    });
+
+    return { c, score };
+  }).sort((a, b) => b.score - a.score);
+
+  return scored[0]?.score > 0 ? scored[0].c : categories[0];
+};
+
 export default function BudgetPage() {
   const [categories, setCategories] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -86,7 +124,7 @@ export default function BudgetPage() {
 
         const created = [];
         for (const item of items) {
-          const cat = categories.find((c) => c.slug === item.category_slug) || categories[0];
+          const cat = findBestCategory(categories, `${trimmed} ${item.description || ""}`, item.category_slug);
           if (!cat) continue;
 
           const tx = await insertTransaction({
@@ -106,7 +144,7 @@ export default function BudgetPage() {
           {
             role: "assistant",
             text: created.length
-              ? `Added ${created.length} transaction${created.length > 1 ? "s" : ""}.`
+              ? `Added ${created.length} transaction${created.length > 1 ? "s" : ""}.${parsed.parser === "fallback" ? " (Used backup parser.)" : ""}`
               : "I couldn't map that to your categories.",
           },
         ]);

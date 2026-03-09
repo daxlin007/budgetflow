@@ -12,6 +12,25 @@ import {
   upsertCategory,
 } from "../../lib/db";
 
+const EMOJI_CHOICES = ["🛒", "☕", "🍽️", "🏠", "🚗", "⛽", "💡", "📱", "🎬", "🏥", "🎓", "🐶", "🎁", "✈️", "📦", "💳"];
+
+function EmojiPicker({ value, onPick }) {
+  return (
+    <div className="col-span-2 grid grid-cols-8 gap-1.5">
+      {EMOJI_CHOICES.map((emoji) => (
+        <button
+          key={emoji}
+          type="button"
+          onClick={() => onPick(emoji)}
+          className={`h-8 rounded-md border text-base ${value === emoji ? "border-bf-accent bg-bf-accent/10" : "border-white/[0.07] bg-white/[0.02]"}`}
+        >
+          {emoji}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function SetupPage() {
   const [profile, setProfile] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -135,6 +154,7 @@ export default function SetupPage() {
             <input placeholder="Name" value={newCategory.name} onChange={(e) => setNewCategory((p) => ({ ...p, name: e.target.value }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
             <input placeholder="slug" value={newCategory.slug} onChange={(e) => setNewCategory((p) => ({ ...p, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
             <input placeholder="Emoji" value={newCategory.emoji} onChange={(e) => setNewCategory((p) => ({ ...p, emoji: e.target.value }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
+            <EmojiPicker value={newCategory.emoji} onPick={(emoji) => setNewCategory((p) => ({ ...p, emoji }))} />
             <input placeholder="Budget" type="number" step="0.01" value={newCategory.budget} onChange={(e) => setNewCategory((p) => ({ ...p, budget: e.target.value }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
             <input type="color" value={newCategory.color} onChange={(e) => setNewCategory((p) => ({ ...p, color: e.target.value }))} className="h-9 bg-white/[0.04] border border-white/[0.07] rounded-lg px-1 py-1" />
             <button className="rounded-lg bg-bf-accent text-bf-bg text-sm font-semibold">Add Category</button>
@@ -148,6 +168,7 @@ export default function SetupPage() {
                     <input value={editCategory.name} onChange={(e) => setEditCategory((p) => ({ ...p, name: e.target.value }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
                     <input value={editCategory.slug} onChange={(e) => setEditCategory((p) => ({ ...p, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
                     <input value={editCategory.emoji} onChange={(e) => setEditCategory((p) => ({ ...p, emoji: e.target.value }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
+                    <EmojiPicker value={editCategory.emoji} onPick={(emoji) => setEditCategory((p) => ({ ...p, emoji }))} />
                     <input type="number" step="0.01" value={editCategory.budget} onChange={(e) => setEditCategory((p) => ({ ...p, budget: e.target.value }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
                     <input type="color" value={editCategory.color} onChange={(e) => setEditCategory((p) => ({ ...p, color: e.target.value }))} className="h-9 bg-white/[0.04] border border-white/[0.07] rounded-lg px-1 py-1" />
                     <div className="flex gap-2 justify-end">
