@@ -10,7 +10,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -18,6 +17,7 @@ export default function LoginPage() {
     if (!email || !password) { setError("Please fill in all fields."); return; }
     setLoading(true);
 
+    const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
