@@ -1,0 +1,21 @@
+-- ╔══════════════════════════════════════════════════════════════╗
+-- ║  BUDGETFLOW — Seed Default Categories                       ║
+-- ║                                                              ║
+-- ║  This is called from the app during onboarding,              ║
+-- ║  NOT run directly. Kept here for reference.                  ║
+-- ╚══════════════════════════════════════════════════════════════╝
+
+-- Default categories inserted via the app's onboarding flow:
+-- 🏠 Rent / Mortgage    $1,800  #E8927C
+-- 🥑 Groceries          $600    #7CC5A8
+-- ⛽ Gas / Fuel          $200    #7CAFC5
+-- 🍽️ Dining Out         $250    #C57CA8
+-- 💡 Utilities           $250    #C5B87C
+-- 📱 Subscriptions       $80     #A87CC5
+-- 🚌 Transport           $150    #7CC5C5
+-- 🎯 Personal / Fun      $200    #C57C7C
+
+-- Default recurring expenses:
+-- Rent             $1,800  → rent
+-- Phone Plan       $75     → utilities
+-- Netflix+Spotify  $28.99  → subscriptions
