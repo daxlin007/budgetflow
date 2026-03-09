@@ -6,6 +6,65 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+function normalizeSlug(s = "") {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function fallbackParse(message, categories) {
+  const msg = String(message || "").trim();
+  const lowered = msg.toLowerCase();
+  const amountMatches = [...lowered.matchAll(/\$?\s*(\d+(?:\.\d{1,2})?)/g)];
+
+  if (!amountMatches.length) {
+    return {
+      type: "chat",
+      message: "I couldn't find an amount. Try: \"Spent $45 on groceries\".",
+    };
+  }
+
+  const normalizedCats = (categories || []).map((c) => ({
+    ...c,
+    nSlug: normalizeSlug(c.slug),
+    nName: normalizeSlug(c.name),
+  }));
+
+  const pickCategory = (context) => {
+    const ctx = normalizeSlug(context);
+    return (
+      normalizedCats.find((c) => ctx.includes(c.nSlug) || ctx.includes(c.nName)) ||
+      normalizedCats[0] ||
+      null
+    );
+  };
+
+  const items = amountMatches.map((m) => {
+    const amount = Number(m[1]);
+    const slice = lowered.slice(Math.max(0, m.index - 18), Math.min(lowered.length, m.index + 32));
+    const cat = pickCategory(slice);
+    return {
+      amount,
+      category_slug: cat?.slug || normalizedCats[0]?.slug || "other",
+      description: cat?.name || "Expense",
+    };
+  });
+
+  return { type: "transaction", items };
+}
+
+function parseJsonFromModelText(text) {
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first !== -1 && last !== -1 && first < last) {
+      return JSON.parse(cleaned.slice(first, last + 1));
+    }
+    throw new Error("Model response was not valid JSON");
+  }
+}
+
 export async function POST(request) {
   // Verify user is authenticated
   const supabase = createClient();
@@ -26,6 +85,10 @@ export async function POST(request) {
     .join(", ");
 
   try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json(fallbackParse(message, categories));
+    }
+
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1000,
@@ -61,18 +124,11 @@ Rules:
       .map((block) => (block.type === "text" ? block.text : ""))
       .join("");
 
-    const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+    const parsed = parseJsonFromModelText(text);
 
     return NextResponse.json(parsed);
   } catch (error) {
     console.error("Claude API error:", error);
-    return NextResponse.json(
-      {
-        type: "chat",
-        message:
-          "Sorry, I had trouble understanding that. Try: \"Spent $45 on groceries\" or \"$60 gas and $30 coffee\"",
-      },
-      { status: 200 } // Return 200 so client handles gracefully
-    );
+    return NextResponse.json(fallbackParse(message, categories), { status: 200 });
   }
 }

@@ -20,6 +20,8 @@ export default function SetupPage() {
   const [income, setIncome] = useState("");
   const [newCategory, setNewCategory] = useState({ name: "", slug: "", emoji: "📦", budget: "0", color: "#7CC5A8" });
   const [newRecurring, setNewRecurring] = useState({ description: "", amount: "", category_id: "" });
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [editCategory, setEditCategory] = useState({ name: "", slug: "", emoji: "", budget: "0", color: "#7CC5A8" });
 
   const load = async () => {
     const [p, c, r] = await Promise.all([getProfile(), getCategories(), getRecurring()]);
@@ -60,6 +62,31 @@ export default function SetupPage() {
     if (!confirm("Delete category?")) return;
     await deleteCategory(id);
     setCategories((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const beginEditCategory = (cat) => {
+    setEditingCategoryId(cat.id);
+    setEditCategory({
+      name: cat.name,
+      slug: cat.slug,
+      emoji: cat.emoji,
+      budget: String(cat.budget ?? 0),
+      color: cat.color || "#7CC5A8",
+    });
+  };
+
+  const saveCategoryEdit = async (id) => {
+    const updated = await upsertCategory({
+      id,
+      slug: editCategory.slug,
+      name: editCategory.name,
+      emoji: editCategory.emoji,
+      budget: Number(editCategory.budget || 0),
+      color: editCategory.color,
+    });
+
+    setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...updated } : c)));
+    setEditingCategoryId(null);
   };
 
   const addRecurring = async (e) => {
@@ -116,15 +143,32 @@ export default function SetupPage() {
           <div className="space-y-2">
             {categories.map((c) => (
               <div key={c.id} className="flex items-center justify-between border border-white/[0.07] rounded-xl p-2.5 text-sm">
-                <div className="flex items-center gap-2">
-                  <span>{c.emoji}</span>
-                  <span>{c.name}</span>
-                  <span className="text-xs text-bf-dim">({c.slug})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono">${Number(c.budget || 0).toFixed(2)}</span>
-                  <button className="text-xs px-2 py-1 rounded-lg border border-bf-accent2/30 text-bf-accent2" onClick={() => removeCategory(c.id)}>Delete</button>
-                </div>
+                {editingCategoryId === c.id ? (
+                  <div className="w-full grid grid-cols-2 gap-2">
+                    <input value={editCategory.name} onChange={(e) => setEditCategory((p) => ({ ...p, name: e.target.value }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
+                    <input value={editCategory.slug} onChange={(e) => setEditCategory((p) => ({ ...p, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
+                    <input value={editCategory.emoji} onChange={(e) => setEditCategory((p) => ({ ...p, emoji: e.target.value }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
+                    <input type="number" step="0.01" value={editCategory.budget} onChange={(e) => setEditCategory((p) => ({ ...p, budget: e.target.value }))} className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5 text-sm" />
+                    <input type="color" value={editCategory.color} onChange={(e) => setEditCategory((p) => ({ ...p, color: e.target.value }))} className="h-9 bg-white/[0.04] border border-white/[0.07] rounded-lg px-1 py-1" />
+                    <div className="flex gap-2 justify-end">
+                      <button className="text-xs px-2 py-1 rounded-lg border border-white/[0.12]" onClick={() => setEditingCategoryId(null)}>Cancel</button>
+                      <button className="text-xs px-2 py-1 rounded-lg bg-bf-accent text-bf-bg font-semibold" onClick={() => saveCategoryEdit(c.id)}>Save</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span>{c.emoji}</span>
+                      <span>{c.name}</span>
+                      <span className="text-xs text-bf-dim">({c.slug})</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono">${Number(c.budget || 0).toFixed(2)}</span>
+                      <button className="text-xs px-2 py-1 rounded-lg border border-white/[0.12]" onClick={() => beginEditCategory(c)}>Edit</button>
+                      <button className="text-xs px-2 py-1 rounded-lg border border-bf-accent2/30 text-bf-accent2" onClick={() => removeCategory(c.id)}>Delete</button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
