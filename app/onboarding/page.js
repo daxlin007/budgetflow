@@ -89,6 +89,10 @@ export default function OnboardingPage() {
   const [catBudgets, setCatBudgets] = useState(
     DEFAULT_CATEGORIES.reduce((acc, c) => ({ ...acc, [c.slug]: String(c.budget) }), {})
   );
+  const [customCats, setCustomCats] = useState([]);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatEmoji, setNewCatEmoji] = useState("📦");
+  const [newCatBudget, setNewCatBudget] = useState("0");
 
   // Step 3: Recurring
   const [selectedRec, setSelectedRec] = useState(
@@ -100,7 +104,33 @@ export default function OnboardingPage() {
 
   const totalBudget = DEFAULT_CATEGORIES
     .filter((c) => selectedCats[c.slug])
-    .reduce((s, c) => s + (parseFloat(catBudgets[c.slug]) || 0), 0);
+    .reduce((s, c) => s + (parseFloat(catBudgets[c.slug]) || 0), 0) +
+    customCats.reduce((s, c) => s + (parseFloat(c.budget) || 0), 0);
+
+  const addCustomCategory = () => {
+    if (!newCatName.trim()) {
+      setError("Category name is required");
+      return;
+    }
+    const slug = newCatName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    if (customCats.some((c) => c.slug === slug) || DEFAULT_CATEGORIES.some((c) => c.slug === slug)) {
+      setError("Category already exists");
+      return;
+    }
+    setCustomCats([...customCats, { slug, name: newCatName, emoji: newCatEmoji, budget: parseFloat(newCatBudget) || 0, color: "#7CC5A8", isCustom: true }]);
+    setNewCatName("");
+    setNewCatEmoji("📦");
+    setNewCatBudget("0");
+    setError("");
+  };
+
+  const removeCustomCategory = (idx) => {
+    setCustomCats(customCats.filter((_, i) => i !== idx));
+  };
+
+  const toggleDefaultCategory = (slug) => {
+    setSelectedCats((p) => ({ ...p, [slug]: !p[slug] }));
+  };
 
   const handleFinish = async () => {
     setError("");
@@ -109,11 +139,12 @@ export default function OnboardingPage() {
       // Save income
       await updateProfile({ monthly_income: parseFloat(income) || 5500, onboarded: true });
 
-      // Save selected categories
-      const cats = DEFAULT_CATEGORIES
+      // Save selected categories (defaults + custom)
+      const defaultCats = DEFAULT_CATEGORIES
         .filter((c) => selectedCats[c.slug])
         .map((c) => ({ ...c, budget: parseFloat(catBudgets[c.slug]) || c.budget }));
-      const savedCats = await insertCategories(cats);
+      const allCats = [...defaultCats, ...customCats];
+      const savedCats = await insertCategories(allCats);
 
       if (!savedCats || savedCats.length === 0) {
         throw new Error("Failed to create categories. Please try again.");
@@ -222,12 +253,13 @@ export default function OnboardingPage() {
               <h2 className="text-xl font-bold mb-1">Budget Categories</h2>
               <p className="text-bf-dim text-sm mb-4">Select which categories to track and set your monthly budget for each.</p>
 
-              <div className="flex flex-col gap-2 mb-4 max-h-[340px] overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2 mb-4 max-h-[280px] overflow-y-auto pr-1">
+                {/* Default Categories */}
                 {DEFAULT_CATEGORIES.map((cat) => (
                   <div
                     key={cat.slug}
                     className={`rounded-xl p-3 border transition cursor-pointer ${selectedCats[cat.slug] ? "border-bf-accent/30 bg-bf-accent/[0.05]" : "border-white/[0.07] bg-white/[0.02] opacity-50"}`}
-                    onClick={() => setSelectedCats((p) => ({ ...p, [cat.slug]: !p[cat.slug] }))}
+                    onClick={() => toggleDefaultCategory(cat.slug)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -252,12 +284,87 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 ))}
+
+                {/* Custom Categories */}
+                {customCats.map((cat, idx) => (
+                  <div
+                    key={`custom-${idx}`}
+                    className="rounded-xl p-3 border border-bf-accent/30 bg-bf-accent/[0.05] transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{cat.emoji}</span>
+                        <span className="text-sm font-medium">{cat.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-bf-dim font-mono">$</span>
+                          <input
+                            type="number"
+                            value={cat.budget}
+                            onChange={(e) => setCustomCats(customCats.map((c, i) => i === idx ? { ...c, budget: parseFloat(e.target.value) || 0 } : c))}
+                            className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-bf-accent/30"
+                            min="0"
+                          />
+                        </div>
+                        <button
+                          onClick={() => removeCustomCategory(idx)}
+                          className="text-bf-dim hover:text-bf-accent2 transition text-lg leading-none"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Custom Category */}
+              <div className="bg-white/[0.02] border border-white/[0.07] rounded-xl p-3 mb-4">
+                <p className="text-xs text-bf-dim font-mono uppercase tracking-widest mb-2">Add Custom Category</p>
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="text"
+                    placeholder="Category name"
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm outline-none focus:border-bf-accent/30 transition"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Emoji"
+                      value={newCatEmoji}
+                      onChange={(e) => setNewCatEmoji(e.target.value.slice(0, 2))}
+                      className="w-12 bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-2 text-sm text-center outline-none focus:border-bf-accent/30 transition"
+                      maxLength="2"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Budget"
+                      value={newCatBudget}
+                      onChange={(e) => setNewCatBudget(e.target.value)}
+                      className="flex-1 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm outline-none focus:border-bf-accent/30 transition"
+                      min="0"
+                    />
+                    <button
+                      onClick={addCustomCategory}
+                      className="px-3 py-2 rounded-lg bg-bf-accent/20 text-bf-accent hover:bg-bf-accent/30 transition text-sm font-bold"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-between py-2 border-t border-white/[0.07] mb-4">
                 <span className="text-xs text-bf-dim font-mono">Total Budget</span>
                 <span className="text-sm font-bold font-mono text-bf-accent">${totalBudget.toLocaleString("en-CA", { minimumFractionDigits: 0 })}/mo</span>
               </div>
+
+              {error && (
+                <div className="text-sm text-bf-accent2 px-3 py-2 bg-bf-accent2/[0.08] rounded-lg border border-bf-accent2/[0.15] mb-4">{error}</div>
+              )}
 
               <div className="flex gap-3">
                 <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl bg-white/[0.04] border border-white/[0.07] text-bf-dim text-sm cursor-pointer hover:bg-white/[0.07] transition">← Back</button>
