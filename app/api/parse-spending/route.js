@@ -25,11 +25,15 @@ export async function POST(request) {
     .map((c) => `"${c.slug}" (${c.name})`)
     .join(", ");
 
+  const currentDate = new Date().toISOString().split('T')[0];
+
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1000,
       system: `You are a budget assistant. Extract spending from natural language.
+
+Today's date: ${currentDate}
 
 Budget categories: ${catList}
 
