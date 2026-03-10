@@ -10,6 +10,7 @@ export async function POST(request) {
     password,
     options: {
       data: { name },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
     },
   });
 
