@@ -68,9 +68,13 @@ export default function OnboardingPage() {
         .map((c) => ({ ...c, budget: parseFloat(catBudgets[c.slug]) || c.budget }));
       const savedCats = await insertCategories(cats);
 
+      if (!savedCats || savedCats.length === 0) {
+        throw new Error("Failed to create categories. Please try again.");
+      }
+
       // Save selected recurring (matched to saved category IDs)
       const catBySlug = {};
-      savedCats.forEach((c) => { catBySlug[c.slug] = c; });
+      (savedCats || []).forEach((c) => { if (c && c.slug) catBySlug[c.slug] = c; });
 
       const recs = DEFAULT_RECURRING
         .filter((r) => selectedRec[r.slug + r.description])

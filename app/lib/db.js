@@ -73,7 +73,7 @@ export async function insertCategories(categories) {
     .select();
 
   if (error) throw error;
-  return data;
+  return (data || []).filter(c => c && c.id);
 }
 
 export async function deleteCategory(id) {
@@ -172,7 +172,7 @@ export async function insertRecurringBatch(recs) {
     .select("*, categories(name, emoji, color)");
 
   if (error) throw error;
-  return data;
+  return (data || []).filter(r => r && r.id);
 }
 
 export async function deleteRecurring(id) {
