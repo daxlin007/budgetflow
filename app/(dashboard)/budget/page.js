@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { getCategories, getTransactions, insertTransaction } from "../../lib/db";
+import { getCategories, getTransactions, getAllTransactions, insertTransaction } from "../../lib/db";
 
 const GUIDE_TIPS = [
   { label: "Log a single expense", examples: ["Spent $45 on groceries", "Grabbed lunch for $18", "Filled up the tank — $60"] },
@@ -16,6 +16,7 @@ const nowKey = () => { const d = new Date(); return `${d.getFullYear()}-${String
 export default function BudgetPage() {
   const [cats, setCats] = useState([]);
   const [txs, setTxs] = useState([]);
+  const [allTxs, setAllTxs] = useState([]);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -26,8 +27,8 @@ export default function BudgetPage() {
   const mk = nowKey();
 
   useEffect(() => {
-    Promise.all([getCategories(), getTransactions(mk)])
-      .then(([c, t]) => { setCats(c || []); setTxs(t || []); setLoading(false); })
+    Promise.all([getCategories(), getTransactions(mk), getAllTransactions()])
+      .then(([c, t, allT]) => { setCats(c || []); setTxs(t || []); setAllTxs(allT || []); setLoading(false); })
       .catch((e) => { console.error(e); setLoading(false); });
   }, []);
 
@@ -43,12 +44,27 @@ export default function BudgetPage() {
     return spend;
   };
 
-  const buildBudgetContext = (txList) => {
+  const getYTDCatSpend = (txList) => {
+    const now = new Date();
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+    const spend = {};
+    txList.forEach((t) => {
+      const txDate = new Date(t.date);
+      if (txDate >= yearStart) {
+        spend[t.category_id] = (spend[t.category_id] || 0) + parseFloat(t.amount);
+      }
+    });
+    return spend;
+  };
+
+  const buildBudgetContext = (txList, allTxList) => {
     const spend = getCatSpend(txList);
+    const ytdSpend = getYTDCatSpend(allTxList);
     return cats.map((c) => {
       const spent = spend[c.id] || 0;
+      const ytd = ytdSpend[c.id] || 0;
       const rem = parseFloat(c.budget) - spent;
-      return `${c.name}: ${fmt(spent)} of ${fmt(parseFloat(c.budget))} (${rem >= 0 ? `${fmt(rem)} left` : `${fmt(Math.abs(rem))} over budget`})`;
+      return `${c.name}: ${fmt(spent)} of ${fmt(parseFloat(c.budget))} this month (${rem >= 0 ? `${fmt(rem)} left` : `${fmt(Math.abs(rem))} over budget`}). Year-to-date: ${fmt(ytd)}`;
     }).join("\n");
   };
 
@@ -66,7 +82,7 @@ export default function BudgetPage() {
         body: JSON.stringify({
           message: msg,
           categories: cats,
-          budgetContext: buildBudgetContext(txs),
+          budgetContext: buildBudgetContext(txs, allTxs),
         }),
       });
 
