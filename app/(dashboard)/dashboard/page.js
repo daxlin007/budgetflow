@@ -185,28 +185,49 @@ export default function DashboardPage() {
       {/* Categories */}
       <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5 mb-4">
         <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono mb-3">By Category</div>
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           {sorted.map((cat) => {
-            const pct = parseFloat(cat.budget) > 0 ? (cat.spent / parseFloat(cat.budget)) * 100 : 0;
-            const over = cat.spent > parseFloat(cat.budget);
+            const budget = parseFloat(cat.budget) || 0;
+            const pct = budget > 0 ? Math.min((cat.spent / budget) * 100, 100) : 0;
+            const remaining = budget - cat.spent;
+            const over = remaining < 0;
+            const exact = remaining === 0 && budget > 0;
             return (
               <div key={cat.id}>
-                <div className="flex justify-between items-center mb-1">
+                <div className="flex justify-between items-center mb-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-[15px]">{cat.emoji}</span>
                     <span className="text-[13px] font-medium">{cat.name}</span>
                   </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className={`text-[13px] font-semibold font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "" : "text-bf-dim"}`}>{fmt(cat.spent)}</span>
-                    <span className="text-[10px] text-bf-dim font-mono">/ {fmtShort(parseFloat(cat.budget))}</span>
+                  <div className="text-right">
+                    {/* Primary: remaining (or over) */}
+                    <div className={`text-[13px] font-bold font-mono leading-none ${over ? "text-bf-accent2" : exact ? "text-bf-warn" : cat.spent > 0 ? "text-bf-accent" : "text-bf-dim"}`}>
+                      {over
+                        ? `${fmt(Math.abs(remaining))} over`
+                        : exact
+                        ? "budget hit"
+                        : cat.spent > 0
+                        ? `${fmt(remaining)} left`
+                        : fmt(budget)}
+                    </div>
+                    {/* Secondary: spent / budget fraction */}
+                    <div className="text-[10px] text-bf-dim font-mono mt-0.5">
+                      {fmt(cat.spent)} <span className="opacity-50">/</span> {fmt(budget)}
+                    </div>
                   </div>
                 </div>
-                <div className="h-1 rounded-sm bg-white/[0.05] overflow-hidden">
-                  <div className="h-full rounded-sm transition-all duration-600" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "#E8927C" : cat.color }} />
+                <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, background: over ? "#E8927C" : exact ? "#C5B87C" : cat.color }}
+                  />
                 </div>
               </div>
             );
           })}
+          {sorted.length === 0 && (
+            <div className="text-center py-4 text-bf-dim text-sm">No categories yet — visit Setup to add them.</div>
+          )}
         </div>
       </div>
 

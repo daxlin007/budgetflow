@@ -35,8 +35,41 @@ export default function SetupPage() {
 
   // New category form
   const PRESET_COLORS = ["#7CC5A8","#E8927C","#7CAFC5","#C5B87C","#A87CC5","#C57CA8","#7CC5C5","#C57C7C"];
+
+  // Emoji palette — grouped by theme for easy picking
+  const EMOJI_PALETTE = [
+    // Food & dining
+    "🍕","🍔","🌮","🌯","🍜","🍣","🥩","🍗","🥗","🥑",
+    "🍞","🧀","🥚","🥞","🧇","🍰","🧁","🍩","🍫","🍬",
+    "☕","🧋","🍺","🍷","🥤","🧃","🍵","🥛","🥂","🍾",
+    // Home & utilities
+    "🏠","🏡","🛋️","💡","🔌","🛁","🚿","🔧","🛒","🧹",
+    "🪴","🧺","🛏️","🚪","🪟","🔑","🏗️","🧱","🪑","🖼️",
+    // Transport
+    "🚗","🚙","✈️","🚌","🚂","🚲","🛵","🚕","🛳️","🏍️",
+    "⛽","🅿️","🚦","🗺️","🧭","⛵","🚁","🛺","🚐","🏎️",
+    // Health & fitness
+    "💊","🏥","🧘","💪","🏋️","❤️","🩺","🦷","🧴","🌿",
+    "🩹","💉","🧬","🫀","🧖","🏃","🚴","⚕️","🌡️","🛌",
+    // Finance & work
+    "💰","💳","🏦","📈","💸","💼","📊","🎯","🏷️","📝",
+    "📋","🖊️","📌","🗂️","🗃️","💹","🏧","🧾","📑","🔒",
+    // Entertainment & lifestyle
+    "🎮","🎬","🎵","📚","🎭","🏀","⚽","🎨","🎧","🎤",
+    "🎲","🃏","🎸","🎹","🎺","🎻","🏆","🥇","🎊","🎉",
+    // Shopping & personal
+    "🛍️","👗","👟","💄","👜","💍","⌚","🕶️","🧢","🎁",
+    "👒","🧣","🧤","🧥","👔","👕","👖","🩳","💎","🪮",
+    // Tech & subscriptions
+    "📱","💻","🖥️","📺","🎙️","🔋","📡","⌨️","🖱️","🖨️",
+    "📷","📸","🎥","📻","☎️","📞","🔭","🔬","💾","📀",
+    // Nature & misc
+    "🌟","🌈","🌙","☀️","🌊","🌴","🌺","🍀","⛅","❄️",
+    "🐶","🐱","🐠","🌻","🍁","🎋","🪐","🌍","🌸","🦋",
+  ];
   const [newCat, setNewCat] = useState({ name: "", emoji: "📦", budget: "", color: "#7CC5A8" });
   const [addingCat, setAddingCat] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // New recurring expense form
   const [newRec, setNewRec] = useState({
@@ -325,18 +358,47 @@ export default function SetupPage() {
             Add Category
           </div>
           <div className="flex gap-2 flex-wrap">
-            {/* Emoji */}
-            <input
-              value={newCat.emoji}
-              onChange={(e) => setNewCat((p) => ({ ...p, emoji: e.target.value }))}
-              maxLength={2}
-              placeholder="📦"
-              className="w-14 bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-sm text-bf-text outline-none focus:border-bf-accent/30 transition text-center"
-            />
+            {/* Emoji trigger button */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker((p) => !p)}
+                title="Pick emoji"
+                className="w-[46px] h-[46px] bg-white/[0.04] border border-white/[0.1] rounded-xl text-xl flex items-center justify-center hover:bg-white/[0.08] transition cursor-pointer"
+              >
+                {newCat.emoji}
+              </button>
+              {showEmojiPicker && (
+                <div className="absolute top-[52px] left-0 z-30 bg-bf-surface border border-white/[0.12] rounded-2xl p-3 shadow-2xl"
+                  style={{ width: 272 }}>
+                  <div
+                    className="overflow-y-auto"
+                    style={{ maxHeight: 220 }}
+                  >
+                    <div className="grid grid-cols-10 gap-0.5">
+                      {EMOJI_PALETTE.map((e) => (
+                        <button
+                          key={e}
+                          type="button"
+                          onClick={() => {
+                            setNewCat((p) => ({ ...p, emoji: e }));
+                            setShowEmojiPicker(false);
+                          }}
+                          className={`text-[18px] w-[25px] h-[25px] flex items-center justify-center rounded hover:bg-white/[0.1] transition cursor-pointer ${newCat.emoji === e ? "bg-bf-accent/[0.15]" : ""}`}
+                        >
+                          {e}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             {/* Name */}
             <input
               value={newCat.name}
               onChange={(e) => setNewCat((p) => ({ ...p, name: e.target.value }))}
+              onFocus={() => setShowEmojiPicker(false)}
               placeholder="Category name"
               className="flex-1 min-w-[120px] bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-sm text-bf-text outline-none focus:border-bf-accent/30 transition"
             />
@@ -347,6 +409,7 @@ export default function SetupPage() {
               min="0"
               value={newCat.budget}
               onChange={(e) => setNewCat((p) => ({ ...p, budget: e.target.value }))}
+              onFocus={() => setShowEmojiPicker(false)}
               placeholder="Budget $"
               className="w-28 bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-sm text-bf-text outline-none focus:border-bf-accent/30 transition"
             />
