@@ -6,6 +6,7 @@ import {
   getCategories, upsertCategory, deleteCategory,
   getRecurring, insertRecurring, deleteRecurring,
 } from "../../lib/db";
+import { AVAILABLE_CURRENCIES, getCurrencySymbol } from "../../lib/currency";
 
 const PRESET_COLORS = [
   "#7CC5A8", "#E8927C", "#7CAFC5", "#C57CA8",
@@ -199,6 +200,7 @@ export default function SetupPage() {
   // Profile
   const [income, setIncome] = useState("");
   const [name, setName] = useState("");
+  const [userCurrency, setUserCurrency] = useState("USD");
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Category editing
@@ -218,6 +220,7 @@ export default function SetupPage() {
         setProfile(p);
         setIncome(p?.monthly_income ? String(p.monthly_income) : "");
         setName(p?.name || "");
+        setUserCurrency(p?.currency || "USD");
         setCats(c || []);
         setRecurring(r || []);
         setLoading(false);
@@ -233,7 +236,7 @@ export default function SetupPage() {
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
-      await updateProfile({ name: name.trim(), monthly_income: parseFloat(income) || 0 });
+      await updateProfile({ name: name.trim(), monthly_income: parseFloat(income) || 0, currency: userCurrency });
       showToast("Profile saved!");
     } catch (e) {
       showToast(e.message || "Save failed.", "error");
@@ -344,7 +347,7 @@ export default function SetupPage() {
               <div>
                 <label className={labelCls}>Monthly Take-Home Income (after tax)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-bf-dim font-mono">$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-bf-dim font-mono">{getCurrencySymbol(userCurrency)}</span>
                   <input
                     type="number" min="0" step="0.01" value={income}
                     onChange={(e) => setIncome(e.target.value)}
@@ -353,6 +356,20 @@ export default function SetupPage() {
                   />
                 </div>
                 <p className="text-[11px] text-bf-dim mt-1.5">Used to calculate your savings rate on the dashboard.</p>
+              </div>
+              <div>
+                <label className={labelCls}>Currency</label>
+                <select
+                  value={userCurrency}
+                  onChange={(e) => setUserCurrency(e.target.value)}
+                  className={inputCls}
+                >
+                  {AVAILABLE_CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.symbol} {c.code} - {c.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <button
                 onClick={handleSaveProfile}

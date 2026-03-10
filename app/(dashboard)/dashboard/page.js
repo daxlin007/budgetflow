@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCategories, getAllTransactions, getProfile } from "../../lib/db";
+import { formatCurrency, formatCurrencyShort } from "../../lib/currency";
 
-const fmt = (n) => `$${Math.abs(n).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmtShort = (n) => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(0)}`);
+const fmt = (n, currency = "USD") => formatCurrency(n, currency);
+const fmtShort = (n, currency = "USD") => formatCurrencyShort(n, currency);
 const nowKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
 const mkLabel = (k) => { const [y, m] = k.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-CA", { month: "long", year: "numeric" }); };
 const mkShort = (k) => { const [y, m] = k.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-CA", { month: "short" }); };
@@ -129,8 +130,8 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-3 text-center">
-            <div className="text-xl font-bold font-mono">{fmt(sTotalSpent)}</div>
-            <div className="text-[11px] text-bf-dim mt-0.5">of {fmt(totalBudget)} budget</div>
+            <div className="text-xl font-bold font-mono">{fmt(sTotalSpent, profile?.currency)}</div>
+            <div className="text-[11px] text-bf-dim mt-0.5">of {fmt(totalBudget, profile?.currency)} budget</div>
           </div>
         </div>
 
@@ -138,7 +139,7 @@ export default function DashboardPage() {
         <div className="flex-1 flex flex-col gap-2 min-w-[160px] sm:min-w-[200px]">
           <div className={`rounded-xl p-3 sm:p-4 ${remaining >= 0 ? "bg-bf-accent/[0.06] border border-bf-accent/[0.15]" : "bg-bf-accent2/[0.08] border border-bf-accent2/[0.2]"}`}>
             <div className="text-[9px] sm:text-[10px] text-bf-dim tracking-widest uppercase font-mono">{isCur ? "Remaining" : remaining >= 0 ? "Under Budget" : "Over Budget"}</div>
-            <div className={`text-lg sm:text-2xl font-bold font-mono mt-1 ${remaining >= 0 ? "text-bf-accent" : "text-bf-accent2"}`}>{remaining >= 0 ? fmt(remaining) : `-${fmt(Math.abs(remaining))}`}</div>
+            <div className={`text-lg sm:text-2xl font-bold font-mono mt-1 ${remaining >= 0 ? "text-bf-accent" : "text-bf-accent2"}`}>{remaining >= 0 ? fmt(remaining, profile?.currency) : `-${fmt(Math.abs(remaining), profile?.currency)}`}</div>
           </div>
           <div className="flex gap-2">
             <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-2.5 sm:p-3.5">
@@ -164,7 +165,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-2.5 sm:p-3.5">
               <div className="text-[8px] sm:text-[10px] text-bf-dim tracking-widest uppercase font-mono">Daily Avg</div>
-              <div className="text-base sm:text-xl font-bold font-mono mt-1">{dayN > 0 ? fmt(sTotalSpent / dayN) : "$0"}</div>
+              <div className="text-base sm:text-xl font-bold font-mono mt-1">{dayN > 0 ? fmt(sTotalSpent / dayN, profile?.currency) : fmt(0, profile?.currency)}</div>
             </div>
           </div>
         </div>
@@ -180,7 +181,7 @@ export default function DashboardPage() {
             const over = m.total > totalBudget;
             return (
               <div key={m.key} className="flex-1 flex flex-col items-center gap-1.5 cursor-pointer" style={{ opacity: m.cur ? 1 : 0.65 }} onClick={() => setSelMonth(m.key)}>
-                {m.total > 0 && <span className="text-[9px] font-mono" style={{ color: m.cur ? "#E8E6E1" : "rgba(255,255,255,0.38)" }}>{fmtShort(m.total)}</span>}
+                {m.total > 0 && <span className="text-[9px] font-mono" style={{ color: m.cur ? "#E8E6E1" : "rgba(255,255,255,0.38)" }}>{fmtShort(m.total, profile?.currency)}</span>}
                 <div className="w-full relative h-[90px] flex items-end">
                   <div className="absolute left-0 right-0" style={{ bottom: budH, borderTop: "1px dashed rgba(124,197,168,0.2)" }} />
                   <div className="w-full rounded-[5px] transition-all duration-500" style={{
@@ -218,13 +219,13 @@ export default function DashboardPage() {
                     {/* Remaining / over — the at-a-glance number */}
                     {budget > 0 && (
                       <span className={`font-semibold font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "text-bf-accent" : "text-bf-dim"}`}>
-                        {over ? `-${fmt(Math.abs(remaining))} over` : `${fmt(remaining)} left`}
+                        {over ? `-${fmt(Math.abs(remaining), profile?.currency)} over` : `${fmt(remaining, profile?.currency)} left`}
                       </span>
                     )}
                     {/* Spent / budget */}
                     <div className="flex items-baseline gap-0.5 sm:gap-1 text-right">
-                      <span className={`text-[11px] sm:text-[12px] font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "text-bf-dim" : "text-bf-dim"}`}>{fmt(cat.spent)}</span>
-                      <span className="text-[9px] sm:text-[10px] text-bf-dim font-mono">/ {fmtShort(budget)}</span>
+                      <span className={`text-[11px] sm:text-[12px] font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "text-bf-dim" : "text-bf-dim"}`}>{fmt(cat.spent, profile?.currency)}</span>
+                      <span className="text-[9px] sm:text-[10px] text-bf-dim font-mono">/ {fmtShort(budget, profile?.currency)}</span>
                     </div>
                   </div>
                 </div>
@@ -285,7 +286,7 @@ export default function DashboardPage() {
                 </div>
                 {dayTotals[topDayIdx] > 0 && (
                   <p className="text-[10px] text-bf-dim mt-2">
-                    Highest spend on <span className="text-bf-text font-medium">{DAYS[topDayIdx]}</span> — {fmt(dayTotals[topDayIdx])}
+                    Highest spend on <span className="text-bf-text font-medium">{DAYS[topDayIdx]}</span> — {fmt(dayTotals[topDayIdx], profile?.currency)}
                   </p>
                 )}
               </div>
@@ -305,14 +306,14 @@ export default function DashboardPage() {
                       <div className="w-2 h-2 rounded-full bg-bf-accent/60" />
                       <span className="text-[11px] text-bf-dim">Recurring</span>
                     </div>
-                    <span className="text-[11px] font-mono text-bf-text">{fmt(recurringTotal)}</span>
+                    <span className="text-[11px] font-mono text-bf-text">{fmt(recurringTotal, profile?.currency)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-1.5">
                       <div className="w-2 h-2 rounded-full bg-white/[0.2]" />
                       <span className="text-[11px] text-bf-dim">One-Time</span>
                     </div>
-                    <span className="text-[11px] font-mono text-bf-text">{fmt(oneTimeTotal)}</span>
+                    <span className="text-[11px] font-mono text-bf-text">{fmt(oneTimeTotal, profile?.currency)}</span>
                   </div>
                 </div>
               </div>
@@ -352,7 +353,7 @@ export default function DashboardPage() {
                   <div className="text-[12px] sm:text-[13px] truncate">{tx.description}{tx.is_recurring && <span className="text-[8px] sm:text-[9px] text-bf-accent ml-1 font-mono">↻</span>}</div>
                   <div className="text-[9px] sm:text-[10px] text-bf-dim">{tx.date}</div>
                 </div>
-                <span className="text-[11px] sm:text-[13px] font-semibold text-bf-accent2 font-mono ml-2 flex-shrink-0">-{fmt(parseFloat(tx.amount))}</span>
+                <span className="text-[11px] sm:text-[13px] font-semibold text-bf-accent2 font-mono ml-2 flex-shrink-0">-{fmt(parseFloat(tx.amount), profile?.currency)}</span>
               </div>
             );
           })
@@ -387,16 +388,16 @@ export default function DashboardPage() {
               <div className="flex gap-3 mt-4">
                 <div className="flex-1 bg-white/[0.04] rounded-xl p-3">
                   <div className="text-[10px] text-bf-dim font-mono uppercase tracking-widest">Spent</div>
-                  <div className="text-[15px] font-bold font-mono mt-0.5 text-bf-accent2">{fmt(selectedCat.spent)}</div>
+                  <div className="text-[15px] font-bold font-mono mt-0.5 text-bf-accent2">{fmt(selectedCat.spent, profile?.currency)}</div>
                 </div>
                 <div className="flex-1 bg-white/[0.04] rounded-xl p-3">
                   <div className="text-[10px] text-bf-dim font-mono uppercase tracking-widest">Budget</div>
-                  <div className="text-[15px] font-bold font-mono mt-0.5">{fmt(budget)}</div>
+                  <div className="text-[15px] font-bold font-mono mt-0.5">{fmt(budget, profile?.currency)}</div>
                 </div>
                 <div className={`flex-1 rounded-xl p-3 ${over ? "bg-bf-accent2/[0.08]" : "bg-bf-accent/[0.06]"}`}>
                   <div className="text-[10px] text-bf-dim font-mono uppercase tracking-widest">{over ? "Over" : "Left"}</div>
                   <div className={`text-[15px] font-bold font-mono mt-0.5 ${over ? "text-bf-accent2" : "text-bf-accent"}`}>
-                    {over ? `-${fmt(Math.abs(remaining))}` : fmt(remaining)}
+                    {over ? `-${fmt(Math.abs(remaining), profile?.currency)}` : fmt(remaining, profile?.currency)}
                   </div>
                 </div>
               </div>
@@ -427,7 +428,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="text-[10px] text-bf-dim mt-0.5">{tx.date}</div>
                       </div>
-                      <span className="text-[13px] font-semibold text-bf-accent2 font-mono">-{fmt(parseFloat(tx.amount))}</span>
+                      <span className="text-[13px] font-semibold text-bf-accent2 font-mono">-{fmt(parseFloat(tx.amount), profile?.currency)}</span>
                     </div>
                   ))}
                 </>

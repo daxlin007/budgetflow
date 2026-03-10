@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getCategories, getAllTransactions, updateTransaction, deleteTransaction } from "../../lib/db";
+import { getCategories, getAllTransactions, updateTransaction, deleteTransaction, getProfile } from "../../lib/db";
+import { formatCurrency } from "../../lib/currency";
+import AddPastTransaction from "./add-past-transaction";
 
-const fmt = (n) => `$${Math.abs(n).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmt = (n, currency = "USD") => formatCurrency(n, currency);
 const nowKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
 const mkLabel = (k) => { const [y, m] = k.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-CA", { month: "long", year: "numeric" }); };
 const shiftMk = (k, d) => { const [y, m] = k.split("-").map(Number); const dt = new Date(y, m - 1 + d, 1); return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`; };
@@ -14,6 +16,7 @@ const arrowCls = "bg-white/[0.05] border border-white/[0.07] rounded-lg px-3 py-
 export default function HistoryPage() {
   const [cats, setCats] = useState([]);
   const [txs, setTxs] = useState([]);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selMonth, setSelMonth] = useState(nowKey());
   const [search, setSearch] = useState("");
@@ -24,12 +27,13 @@ export default function HistoryPage() {
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [showAddPastTx, setShowAddPastTx] = useState(false);
 
   const mk = nowKey();
 
   useEffect(() => {
-    Promise.all([getCategories(), getAllTransactions()])
-      .then(([c, t]) => { setCats(c || []); setTxs(t || []); setLoading(false); })
+    Promise.all([getCategories(), getAllTransactions(), getProfile()])
+      .then(([c, t, p]) => { setCats(c || []); setTxs(t || []); setProfile(p); setLoading(false); })
       .catch((e) => { console.error(e); setLoading(false); });
   }, []);
 
@@ -197,6 +201,12 @@ export default function HistoryPage() {
           ))}
         </select>
         <button
+          onClick={() => setShowAddPastTx(true)}
+          className="px-4 py-2 rounded-lg bg-gradient-to-br from-bf-accent to-emerald-600 text-bf-bg text-sm font-bold hover:opacity-90 transition"
+        >
+          ➕ Add Transaction
+        </button>
+        <button
           onClick={handleExportCSV}
           disabled={filtered.length === 0}
           className="px-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.07] text-bf-dim text-sm hover:bg-white/[0.08] hover:text-bf-text transition disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap"
@@ -209,7 +219,7 @@ export default function HistoryPage() {
       <div className="flex items-center justify-between mb-3">
         <div className="text-[11px] text-bf-dim font-mono">
           {filtered.length} transaction{filtered.length !== 1 ? "s" : ""}
-          {filtered.length > 0 && <> · <span className="text-bf-accent2">{fmt(totalSpent)}</span> total</>}
+          {filtered.length > 0 && <> · <span className="text-bf-accent2">{fmt(totalSpent, profile?.currency)}</span> total</>}
         </div>
         {selected.size > 0 && (
           <button
@@ -266,7 +276,7 @@ export default function HistoryPage() {
                     <div className="text-[10px] text-bf-dim">{cat?.name || "Uncategorized"}</div>
                   </div>
                   <span className="text-[12px] text-bf-dim font-mono w-24 text-right hidden sm:block">{tx.date}</span>
-                  <span className="text-[13px] font-semibold text-bf-accent2 font-mono w-24 text-right">-{fmt(parseFloat(tx.amount))}</span>
+                  <span className="text-[13px] font-semibold text-bf-accent2 font-mono w-24 text-right">-{fmt(parseFloat(tx.amount), profile?.currency)}</span>
                   <div className="flex gap-1 ml-2 w-16 justify-end">
                     <button
                       onClick={() => setEditTx({ ...tx, amount: String(tx.amount) })}
@@ -373,6 +383,20 @@ export default function HistoryPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Past Transaction Modal */}
+      {showAddPastTx && (
+        <AddPastTransaction
+          cats={cats}
+          currency={profile?.currency || "USD"}
+          onAdded={(tx) => {
+            setTxs((prev) => [...prev, tx]);
+            setShowAddPastTx(false);
+            showToast("Transaction added!");
+          }}
+          onClose={() => setShowAddPastTx(false)}
+        />
       )}
     </div>
   );
