@@ -83,6 +83,7 @@ export default function DashboardPage() {
   const arrowCls = "bg-white/[0.05] border border-white/[0.07] rounded-lg px-3 py-1.5 cursor-pointer text-bf-dim text-sm hover:bg-white/[0.08] transition";
 
   return (
+    <>
     <div className="max-w-[780px] mx-auto px-5 py-6">
       {/* Month Navigator */}
       <div className="flex items-center gap-3 mb-6">
@@ -425,5 +426,6 @@ export default function DashboardPage() {
         </div>
       );
     })()}
+    </>
   );
 }
