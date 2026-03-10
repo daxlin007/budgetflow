@@ -35,7 +35,7 @@ export default function SignupPage() {
 
     // Create profile for new user
     if (authData?.user?.id) {
-      console.log("Creating profile for user:", authData.user.id);
+      console.log("Creating profile for user:", authData.user.id, "name:", name);
       const { error: profileError, data: profileData } = await supabase
         .from("profiles")
         .insert({
@@ -46,11 +46,18 @@ export default function SignupPage() {
         .select();
 
       if (profileError) {
-        console.error("Profile creation error:", profileError);
-        // Continue anyway - user can still login
+        console.error("Profile creation error:", {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+        });
+        setError("Note: Verification email sent. Some profile setup will complete after you verify and log in.");
       } else {
         console.log("Profile created successfully:", profileData);
       }
+    } else {
+      console.error("No user ID from auth signup");
     }
 
     // Show success message

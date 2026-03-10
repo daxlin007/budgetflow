@@ -51,17 +51,24 @@ export default function OnboardingPage() {
 
         if (profileError) {
           // Profile doesn't exist - create it
-          console.log("Creating profile for new user");
-          const { error: createError } = await supabase
+          console.log("Creating profile for new user in onboarding");
+          const { error: createError, data: createData } = await supabase
             .from("profiles")
             .insert({
               id: user.id,
               name: user.user_metadata?.name || "User",
               onboarded: false,
-            });
+            })
+            .select();
 
           if (createError) {
-            console.error("Error creating profile:", createError);
+            console.error("Error creating profile:", {
+              code: createError.code,
+              message: createError.message,
+              details: createError.details,
+            });
+          } else {
+            console.log("Profile created in onboarding:", createData);
           }
         } else if (profile?.onboarded) {
           console.log("User already onboarded, redirecting to dashboard");
