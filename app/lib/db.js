@@ -147,7 +147,7 @@ export async function getRecurring() {
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  return data;
+  return (data || []).filter(r => r && r.id);
 }
 
 export async function insertRecurring(rec) {
@@ -159,6 +159,7 @@ export async function insertRecurring(rec) {
     .single();
 
   if (error) throw error;
+  if (!data || !data.id) throw new Error("Failed to create recurring expense");
   return data;
 }
 
