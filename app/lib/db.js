@@ -97,7 +97,7 @@ export async function getTransactions(monthKey) {
 
   const { data, error } = await query;
   if (error) throw error;
-  return data;
+  return (data || []).filter(t => t && t.id);
 }
 
 export async function getAllTransactions() {
@@ -107,7 +107,7 @@ export async function getAllTransactions() {
     .order("date", { ascending: false });
 
   if (error) throw error;
-  return data;
+  return (data || []).filter(t => t && t.id);
 }
 
 export async function insertTransaction(tx) {

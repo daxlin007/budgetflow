@@ -41,9 +41,10 @@ export default function HistoryPage() {
   // Filter transactions
   const filtered = useMemo(() => {
     return txs.filter((t) => {
-      if (!t.date.startsWith(selMonth)) return false;
+      if (!t || !t.id) return false;
+      if (!t.date || !t.date.startsWith(selMonth)) return false;
       if (filterCat !== "all" && t.category_id !== filterCat) return false;
-      if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search && !t.description?.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
   }, [txs, selMonth, filterCat, search]);

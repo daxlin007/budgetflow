@@ -119,23 +119,23 @@ export default function BudgetPage() {
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 52px)" }}>
       {/* Category Strip */}
-      <div className="flex gap-2 px-4 py-3 border-b border-white/[0.07] overflow-x-auto flex-shrink-0" style={{ scrollbarWidth: "none" }}>
+      <div className="flex gap-2 px-3 sm:px-4 py-2 sm:py-3 border-b border-white/[0.07] overflow-x-auto flex-shrink-0" style={{ scrollbarWidth: "none" }}>
         {catsWithRemaining.length === 0 ? (
-          <span className="text-xs text-bf-dim">No categories yet — set them up in Settings.</span>
+          <span className="text-[11px] sm:text-xs text-bf-dim">No categories yet — set them up in Settings.</span>
         ) : catsWithRemaining.map((cat) => {
           const pct = parseFloat(cat.budget) > 0 ? Math.min((cat.spent / parseFloat(cat.budget)) * 100, 100) : 0;
           const over = cat.remaining < 0;
           return (
-            <div key={cat.id} className="flex-shrink-0 bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2 min-w-[110px]">
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-sm">{cat.emoji}</span>
-                <span className="text-[10px] text-bf-dim truncate max-w-[70px]">{cat.name}</span>
+            <div key={cat.id} className="flex-shrink-0 bg-white/[0.03] border border-white/[0.07] rounded-lg sm:rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 min-w-[100px] sm:min-w-[110px]">
+              <div className="flex items-center gap-1 sm:gap-1.5 mb-0.5 sm:mb-1">
+                <span className="text-xs sm:text-sm flex-shrink-0">{cat.emoji}</span>
+                <span className="text-[9px] sm:text-[10px] text-bf-dim truncate max-w-[60px] sm:max-w-[70px]">{cat.name}</span>
               </div>
               <div className="font-mono">
-                <span className={`text-[13px] font-bold ${over ? "text-bf-accent2" : "text-bf-accent"}`}>
+                <span className={`text-[11px] sm:text-[13px] font-bold ${over ? "text-bf-accent2" : "text-bf-accent"}`}>
                   {over ? `-${fmt(Math.abs(cat.remaining))}` : fmt(cat.remaining)}
                 </span>
-                <span className={`text-[10px] ml-1 ${over ? "text-bf-accent2" : "text-bf-dim"}`}>
+                <span className={`text-[8px] sm:text-[10px] ml-0.5 sm:ml-1 ${over ? "text-bf-accent2" : "text-bf-dim"}`}>
                   {over ? "over" : "left"}
                 </span>
               </div>
@@ -148,7 +148,7 @@ export default function BudgetPage() {
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 min-h-0">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col gap-2 sm:gap-3 min-h-0">
         {messages.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
             <div className="text-5xl mb-4">💬</div>
@@ -262,13 +262,13 @@ export default function BudgetPage() {
       )}
 
       {/* Input Bar */}
-      <div className="px-4 pb-4 pt-2 border-t border-white/[0.07] flex-shrink-0">
+      <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 border-t border-white/[0.07] flex-shrink-0">
         <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
           <button
             type="button"
             onClick={() => setShowGuide((v) => !v)}
             title="Tips & examples"
-            className={`px-3 py-3 rounded-xl border text-sm cursor-pointer transition flex-shrink-0 ${showGuide ? "bg-bf-accent/10 border-bf-accent/30 text-bf-accent" : "bg-white/[0.04] border-white/[0.07] text-bf-dim hover:text-bf-text hover:bg-white/[0.07]"}`}
+            className={`px-2 sm:px-3 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border text-sm cursor-pointer transition flex-shrink-0 ${showGuide ? "bg-bf-accent/10 border-bf-accent/30 text-bf-accent" : "bg-white/[0.04] border-white/[0.07] text-bf-dim hover:text-bf-text hover:bg-white/[0.07]"}`}
           >
             ?
           </button>
@@ -278,12 +278,12 @@ export default function BudgetPage() {
             onChange={(e) => setInput(e.target.value)}
             placeholder='Try "Spent $45 groceries" or "How am I doing?"'
             disabled={sending}
-            className="flex-1 bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-bf-text text-sm outline-none focus:border-bf-accent/30 transition disabled:opacity-50"
+            className="flex-1 bg-white/[0.04] border border-white/[0.07] rounded-lg sm:rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-bf-text text-sm outline-none focus:border-bf-accent/30 transition disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!input.trim() || sending}
-            className="px-5 py-3 rounded-xl bg-gradient-to-br from-bf-accent to-emerald-600 text-bf-bg text-sm font-bold cursor-pointer disabled:opacity-30 transition hover:opacity-90 flex-shrink-0"
+            className="px-3 sm:px-5 py-2.5 sm:py-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-bf-accent to-emerald-600 text-bf-bg text-xs sm:text-sm font-bold cursor-pointer disabled:opacity-30 transition hover:opacity-90 flex-shrink-0"
           >
             Send
           </button>

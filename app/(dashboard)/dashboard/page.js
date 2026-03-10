@@ -84,22 +84,22 @@ export default function DashboardPage() {
 
   return (
     <>
-    <div className="max-w-[780px] mx-auto px-5 py-6">
+    <div className="max-w-[780px] mx-auto px-3 sm:px-5 py-4 sm:py-6">
       {/* Month Navigator */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
         <button onClick={() => setSelMonth(shiftMk(selMonth, -1))} className={arrowCls}>◂</button>
-        <div className="flex-1 text-center">
-          <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono">{isCur ? "Current Month" : "Viewing"}</div>
-          <h1 className="text-2xl font-bold mt-0.5">{mkLabel(selMonth)}</h1>
-          {!isCur && <button onClick={() => setSelMonth(mk)} className="text-xs text-bf-accent bg-transparent border-none cursor-pointer mt-0.5">Jump to current →</button>}
+        <div className="flex-1 text-center min-w-0">
+          <div className="text-[10px] sm:text-[11px] text-bf-dim tracking-widest uppercase font-mono">{isCur ? "Current Month" : "Viewing"}</div>
+          <h1 className="text-xl sm:text-2xl font-bold mt-0.5">{mkLabel(selMonth)}</h1>
+          {!isCur && <button onClick={() => setSelMonth(mk)} className="text-[11px] sm:text-xs text-bf-accent bg-transparent border-none cursor-pointer mt-0.5">Jump to current →</button>}
         </div>
         <button onClick={() => { if (selMonth < mk) setSelMonth(shiftMk(selMonth, 1)); }} className={arrowCls} style={{ opacity: selMonth >= mk ? 0.25 : 1 }}>▸</button>
       </div>
 
       {/* Top Row: Donut + Stats */}
-      <div className="flex gap-4 mb-5 flex-wrap">
+      <div className="flex gap-3 sm:gap-4 mb-4 sm:mb-5 flex-wrap">
         {/* Donut */}
-        <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 flex flex-col items-center min-w-[210px]">
+        <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 sm:p-6 flex flex-col items-center min-w-[180px] sm:min-w-[210px]">
           <div className="relative" style={{ width: donutSz, height: donutSz }}>
             <svg width={donutSz} height={donutSz} style={{ transform: "rotate(-90deg)" }}>
               <circle cx={donutSz / 2} cy={donutSz / 2} r={donutR} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={donutSt} />
@@ -113,8 +113,8 @@ export default function DashboardPage() {
               })}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="text-[26px] font-bold leading-none">{Math.round(pctBudget)}%</div>
-              <div className="text-[10px] text-bf-dim mt-0.5">of budget</div>
+              <div className="text-[22px] sm:text-[26px] font-bold leading-none">{Math.round(pctBudget)}%</div>
+              <div className="text-[9px] sm:text-[10px] text-bf-dim mt-0.5">of budget</div>
             </div>
           </div>
           <div className="mt-3 text-center">
@@ -124,36 +124,36 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Column */}
-        <div className="flex-1 flex flex-col gap-2 min-w-[200px]">
-          <div className={`rounded-xl p-4 ${remaining >= 0 ? "bg-bf-accent/[0.06] border border-bf-accent/[0.15]" : "bg-bf-accent2/[0.08] border border-bf-accent2/[0.2]"}`}>
-            <div className="text-[10px] text-bf-dim tracking-widest uppercase font-mono">{isCur ? "Remaining" : remaining >= 0 ? "Under Budget" : "Over Budget"}</div>
-            <div className={`text-2xl font-bold font-mono mt-1 ${remaining >= 0 ? "text-bf-accent" : "text-bf-accent2"}`}>{remaining >= 0 ? fmt(remaining) : `-${fmt(Math.abs(remaining))}`}</div>
+        <div className="flex-1 flex flex-col gap-2 min-w-[160px] sm:min-w-[200px]">
+          <div className={`rounded-xl p-3 sm:p-4 ${remaining >= 0 ? "bg-bf-accent/[0.06] border border-bf-accent/[0.15]" : "bg-bf-accent2/[0.08] border border-bf-accent2/[0.2]"}`}>
+            <div className="text-[9px] sm:text-[10px] text-bf-dim tracking-widest uppercase font-mono">{isCur ? "Remaining" : remaining >= 0 ? "Under Budget" : "Over Budget"}</div>
+            <div className={`text-lg sm:text-2xl font-bold font-mono mt-1 ${remaining >= 0 ? "text-bf-accent" : "text-bf-accent2"}`}>{remaining >= 0 ? fmt(remaining) : `-${fmt(Math.abs(remaining))}`}</div>
           </div>
           <div className="flex gap-2">
-            <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-3.5">
-              <div className="text-[10px] text-bf-dim tracking-widest uppercase font-mono">Of Income</div>
-              <div className={`text-xl font-bold font-mono mt-1 ${pctIncome > 90 ? "text-bf-accent2" : ""}`}>{Math.round(pctIncome)}%</div>
+            <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-2.5 sm:p-3.5">
+              <div className="text-[8px] sm:text-[10px] text-bf-dim tracking-widest uppercase font-mono">Of Income</div>
+              <div className={`text-base sm:text-xl font-bold font-mono mt-1 ${pctIncome > 90 ? "text-bf-accent2" : ""}`}>{Math.round(pctIncome)}%</div>
             </div>
-            <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-3.5">
-              <div className="text-[10px] text-bf-dim tracking-widest uppercase font-mono">Savings</div>
-              <div className={`text-xl font-bold font-mono mt-1 ${savingsRate >= 20 ? "text-bf-accent" : savingsRate >= 0 ? "text-bf-warn" : "text-bf-accent2"}`}>{savingsRate.toFixed(0)}%</div>
+            <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-2.5 sm:p-3.5">
+              <div className="text-[8px] sm:text-[10px] text-bf-dim tracking-widest uppercase font-mono">Savings</div>
+              <div className={`text-base sm:text-xl font-bold font-mono mt-1 ${savingsRate >= 20 ? "text-bf-accent" : savingsRate >= 0 ? "text-bf-warn" : "text-bf-accent2"}`}>{savingsRate.toFixed(0)}%</div>
             </div>
           </div>
           <div className="flex gap-2">
-            <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-3.5">
-              <div className="text-[10px] text-bf-dim tracking-widest uppercase font-mono">{isCur ? "Pace" : "Txns"}</div>
+            <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-2.5 sm:p-3.5">
+              <div className="text-[8px] sm:text-[10px] text-bf-dim tracking-widest uppercase font-mono">{isCur ? "Pace" : "Txns"}</div>
               {isCur ? (
                 <div className="flex items-center gap-1.5 mt-1.5">
                   <div className={`w-2 h-2 rounded-full ${pace === "under" ? "bg-bf-accent shadow-[0_0_6px_rgba(124,197,168,0.4)]" : "bg-bf-accent2 shadow-[0_0_6px_rgba(232,146,124,0.4)]"}`} />
                   <span className={`text-sm font-semibold ${pace === "under" ? "text-bf-accent" : "text-bf-accent2"}`}>{pace === "under" ? "On Track" : "Over Pace"}</span>
                 </div>
               ) : (
-                <div className="text-xl font-bold font-mono mt-1">{sTxs.length}</div>
+                <div className="text-base sm:text-xl font-bold font-mono mt-1">{sTxs.length}</div>
               )}
             </div>
-            <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-3.5">
-              <div className="text-[10px] text-bf-dim tracking-widest uppercase font-mono">Daily Avg</div>
-              <div className="text-xl font-bold font-mono mt-1">{dayN > 0 ? fmt(sTotalSpent / dayN) : "$0"}</div>
+            <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-2.5 sm:p-3.5">
+              <div className="text-[8px] sm:text-[10px] text-bf-dim tracking-widest uppercase font-mono">Daily Avg</div>
+              <div className="text-base sm:text-xl font-bold font-mono mt-1">{dayN > 0 ? fmt(sTotalSpent / dayN) : "$0"}</div>
             </div>
           </div>
         </div>
@@ -185,35 +185,35 @@ export default function DashboardPage() {
       </div>
 
       {/* Categories */}
-      <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5 mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono">By Category</div>
-          <div className="text-[10px] text-bf-dim font-mono">click to see transactions</div>
+      <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 sm:p-5 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-1">
+          <div className="text-[10px] sm:text-[11px] text-bf-dim tracking-widest uppercase font-mono">By Category</div>
+          <div className="text-[9px] sm:text-[10px] text-bf-dim font-mono">click to see transactions</div>
         </div>
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2">
           {sorted.map((cat) => {
             const budget = parseFloat(cat.budget) || 0;
             const pct = budget > 0 ? (cat.spent / budget) * 100 : 0;
             const over = cat.spent > budget;
             const remaining = budget - cat.spent;
             return (
-              <div key={cat.id} onClick={() => setSelectedCat(cat)} className="cursor-pointer rounded-lg -mx-2 px-2 py-1 hover:bg-white/[0.03] transition">
-                <div className="flex justify-between items-center mb-1">
+              <div key={cat.id} onClick={() => setSelectedCat(cat)} className="cursor-pointer rounded-lg -mx-2 px-2 py-1.5 sm:py-1 hover:bg-white/[0.03] transition">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0 sm:mb-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[15px]">{cat.emoji}</span>
-                    <span className="text-[13px] font-medium">{cat.name}</span>
+                    <span className="text-[14px] sm:text-[15px]">{cat.emoji}</span>
+                    <span className="text-[12px] sm:text-[13px] font-medium">{cat.name}</span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-sm">
                     {/* Remaining / over — the at-a-glance number */}
                     {budget > 0 && (
-                      <span className={`text-[12px] font-semibold font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "text-bf-accent" : "text-bf-dim"}`}>
+                      <span className={`font-semibold font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "text-bf-accent" : "text-bf-dim"}`}>
                         {over ? `-${fmt(Math.abs(remaining))} over` : `${fmt(remaining)} left`}
                       </span>
                     )}
                     {/* Spent / budget */}
-                    <div className="flex items-baseline gap-1 text-right">
-                      <span className={`text-[12px] font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "text-bf-dim" : "text-bf-dim"}`}>{fmt(cat.spent)}</span>
-                      <span className="text-[10px] text-bf-dim font-mono">/ {fmtShort(budget)}</span>
+                    <div className="flex items-baseline gap-0.5 sm:gap-1 text-right">
+                      <span className={`text-[11px] sm:text-[12px] font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "text-bf-dim" : "text-bf-dim"}`}>{fmt(cat.spent)}</span>
+                      <span className="text-[9px] sm:text-[10px] text-bf-dim font-mono">/ {fmtShort(budget)}</span>
                     </div>
                   </div>
                 </div>
@@ -327,21 +327,21 @@ export default function DashboardPage() {
       })()}
 
       {/* Recent Transactions */}
-      <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5">
-        <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono mb-3">Transactions — {mkShort(selMonth)}</div>
+      <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 sm:p-5">
+        <div className="text-[10px] sm:text-[11px] text-bf-dim tracking-widest uppercase font-mono mb-3">Transactions — {mkShort(selMonth)}</div>
         {sTxs.length === 0 ? (
           <div className="text-center py-6 text-bf-dim text-sm">{isCur ? "💬 Chat your first expense in the Budget tab!" : "📭 No transactions."}</div>
         ) : (
           sTxs.slice(0, 8).map((tx) => {
             const cat = cats.find((c) => c.id === tx.category_id);
             return (
-              <div key={tx.id} className="flex items-center py-2 border-b border-white/[0.04]">
-                <span className="text-base mr-2.5">{cat?.emoji || "📦"}</span>
-                <div className="flex-1">
-                  <div className="text-[13px]">{tx.description}{tx.is_recurring && <span className="text-[9px] text-bf-accent ml-1.5 font-mono">↻</span>}</div>
-                  <div className="text-[10px] text-bf-dim">{tx.date}</div>
+              <div key={tx.id} className="flex items-center py-1.5 sm:py-2 border-b border-white/[0.04]">
+                <span className="text-sm sm:text-base mr-2 sm:mr-2.5">{cat?.emoji || "📦"}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] sm:text-[13px] truncate">{tx.description}{tx.is_recurring && <span className="text-[8px] sm:text-[9px] text-bf-accent ml-1 font-mono">↻</span>}</div>
+                  <div className="text-[9px] sm:text-[10px] text-bf-dim">{tx.date}</div>
                 </div>
-                <span className="text-[13px] font-semibold text-bf-accent2 font-mono">-{fmt(parseFloat(tx.amount))}</span>
+                <span className="text-[11px] sm:text-[13px] font-semibold text-bf-accent2 font-mono ml-2 flex-shrink-0">-{fmt(parseFloat(tx.amount))}</span>
               </div>
             );
           })
