@@ -38,14 +38,33 @@ export default function OnboardingPage() {
   useEffect(() => {
     const checkOnboarding = async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log("Onboarding page - user:", user?.id);
+
       if (user) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("onboarded")
+          .select("onboarded, name")
           .eq("id", user.id)
           .single();
 
-        if (profile?.onboarded) {
+        console.log("Profile check in onboarding:", { profile, profileError });
+
+        if (profileError) {
+          // Profile doesn't exist - create it
+          console.log("Creating profile for new user");
+          const { error: createError } = await supabase
+            .from("profiles")
+            .insert({
+              id: user.id,
+              name: user.user_metadata?.name || "User",
+              onboarded: false,
+            });
+
+          if (createError) {
+            console.error("Error creating profile:", createError);
+          }
+        } else if (profile?.onboarded) {
+          console.log("User already onboarded, redirecting to dashboard");
           router.push("/dashboard");
         }
       }

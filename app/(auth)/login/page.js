@@ -27,30 +27,38 @@ export default function LoginPage() {
     }
 
     // Check if user has completed onboarding
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setError("Failed to get user");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("Logged in user:", user?.id);
+
+      if (!user) {
+        setError("Failed to get user");
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("onboarded")
+        .eq("id", user.id)
+        .single();
+
+      console.log("Profile query result:", { profile, profileError });
+
+      // If profile doesn't exist, redirect to onboarding (they'll create it there)
+      // If profile exists and not onboarded, go to onboarding
+      // If profile exists and onboarded, go to dashboard
+      if (!profile || !profile?.onboarded) {
+        console.log("Redirecting to /onboarding");
+        router.push("/onboarding");
+      } else {
+        console.log("Redirecting to /dashboard");
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Something went wrong. Please try again.");
       setLoading(false);
-      return;
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("onboarded")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError) {
-      console.error("Profile fetch error:", profileError);
-      // If profile doesn't exist yet, send to onboarding
-      router.push("/onboarding");
-      return;
-    }
-
-    if (profile?.onboarded) {
-      router.push("/dashboard");
-    } else {
-      router.push("/onboarding");
     }
   };
 

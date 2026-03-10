@@ -34,21 +34,26 @@ export default function SignupPage() {
 
     // Create profile for new user
     if (authData?.user?.id) {
-      const { error: profileError } = await supabase
+      console.log("Creating profile for user:", authData.user.id);
+      const { error: profileError, data: profileData } = await supabase
         .from("profiles")
         .insert({
           id: authData.user.id,
           name,
           onboarded: false,
-        });
+        })
+        .select();
 
       if (profileError) {
         console.error("Profile creation error:", profileError);
         // Continue anyway - user can still login
+      } else {
+        console.log("Profile created successfully:", profileData);
       }
     }
 
     // Redirect to login to verify email
+    console.log("Redirecting to login");
     router.push("/login");
   };
 
