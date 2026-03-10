@@ -251,5 +251,89 @@ export async function getMonthlySummaries(months) {
   return summaries;
 }
 
+// ─── CHAT SESSIONS ──────────────────────────────────────────────────────────
+export async function getChatSessions() {
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (error) throw error;
+  return (data || []).filter(s => s && s.id);
+}
+
+export async function createChatSession(title = "Chat") {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .insert({ title, user_id: user.id })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateChatSession(sessionId, updates) {
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", sessionId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteChatSession(sessionId) {
+  const { error } = await supabase
+    .from("chat_sessions")
+    .delete()
+    .eq("id", sessionId);
+
+  if (error) throw error;
+}
+
+// ─── CHAT MESSAGES ──────────────────────────────────────────────────────────
+export async function getChatMessages(sessionId) {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data || []).filter(m => m && m.id);
+}
+
+export async function saveChatMessage(sessionId, message) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .insert({
+      session_id: sessionId,
+      user_id: user.id,
+      role: message.role,
+      type: message.type,
+      text: message.text,
+      items: message.items || null
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteChatMessages(sessionId) {
+  const { error } = await supabase
+    .from("chat_messages")
+    .delete()
+    .eq("session_id", sessionId);
+
+  if (error) throw error;
+}
+
 // ─── EXPORT ─────────────────────────────────────────────────────────────────
 export { supabase };
