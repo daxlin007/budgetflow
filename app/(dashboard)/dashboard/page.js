@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState(null);
   const [selMonth, setSelMonth] = useState(nowKey());
   const [loading, setLoading] = useState(true);
+  const [selectedCat, setSelectedCat] = useState(null);
 
   useEffect(() => {
     Promise.all([getCategories(), getAllTransactions(), getProfile()])
@@ -184,7 +185,10 @@ export default function DashboardPage() {
 
       {/* Categories */}
       <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5 mb-4">
-        <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono mb-3">By Category</div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono">By Category</div>
+          <div className="text-[10px] text-bf-dim font-mono">click to see transactions</div>
+        </div>
         <div className="flex flex-col gap-2.5">
           {sorted.map((cat) => {
             const budget = parseFloat(cat.budget) || 0;
@@ -192,7 +196,7 @@ export default function DashboardPage() {
             const over = cat.spent > budget;
             const remaining = budget - cat.spent;
             return (
-              <div key={cat.id}>
+              <div key={cat.id} onClick={() => setSelectedCat(cat)} className="cursor-pointer rounded-lg -mx-2 px-2 py-1 hover:bg-white/[0.03] transition">
                 <div className="flex justify-between items-center mb-1">
                   <div className="flex items-center gap-2">
                     <span className="text-[15px]">{cat.emoji}</span>
@@ -343,5 +347,83 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+
+    {/* Category Detail Modal */}
+    {selectedCat && (() => {
+      const budget = parseFloat(selectedCat.budget) || 0;
+      const over = selectedCat.spent > budget;
+      const remaining = budget - selectedCat.spent;
+      const catTxs = sTxs.filter((t) => t.category_id === selectedCat.id).sort((a, b) => b.date.localeCompare(a.date));
+      return (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:px-4" onClick={() => setSelectedCat(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative w-full max-w-[480px] bg-bf-bg border border-white/[0.1] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-white/[0.07]" style={{ background: `${selectedCat.color}12` }}>
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: `${selectedCat.color}20` }}>{selectedCat.emoji}</div>
+                  <div>
+                    <div className="font-semibold text-[15px]">{selectedCat.name}</div>
+                    <div className="text-[11px] text-bf-dim font-mono mt-0.5">{mkLabel(selMonth)}</div>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedCat(null)} className="text-bf-dim hover:text-bf-text bg-transparent border-none cursor-pointer text-lg leading-none">✕</button>
+              </div>
+
+              {/* Stats row */}
+              <div className="flex gap-3 mt-4">
+                <div className="flex-1 bg-white/[0.04] rounded-xl p-3">
+                  <div className="text-[10px] text-bf-dim font-mono uppercase tracking-widest">Spent</div>
+                  <div className="text-[15px] font-bold font-mono mt-0.5 text-bf-accent2">{fmt(selectedCat.spent)}</div>
+                </div>
+                <div className="flex-1 bg-white/[0.04] rounded-xl p-3">
+                  <div className="text-[10px] text-bf-dim font-mono uppercase tracking-widest">Budget</div>
+                  <div className="text-[15px] font-bold font-mono mt-0.5">{fmt(budget)}</div>
+                </div>
+                <div className={`flex-1 rounded-xl p-3 ${over ? "bg-bf-accent2/[0.08]" : "bg-bf-accent/[0.06]"}`}>
+                  <div className="text-[10px] text-bf-dim font-mono uppercase tracking-widest">{over ? "Over" : "Left"}</div>
+                  <div className={`text-[15px] font-bold font-mono mt-0.5 ${over ? "text-bf-accent2" : "text-bf-accent"}`}>
+                    {over ? `-${fmt(Math.abs(remaining))}` : fmt(remaining)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              {budget > 0 && (
+                <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min((selectedCat.spent / budget) * 100, 100)}%`, background: over ? "#E8927C" : selectedCat.color }} />
+                </div>
+              )}
+            </div>
+
+            {/* Transactions list */}
+            <div className="max-h-[50vh] overflow-y-auto">
+              {catTxs.length === 0 ? (
+                <div className="text-center py-8 text-bf-dim text-sm">No transactions in {mkLabel(selMonth)}.</div>
+              ) : (
+                <>
+                  <div className="px-5 py-2 text-[10px] text-bf-dim font-mono tracking-widest uppercase border-b border-white/[0.05]">
+                    {catTxs.length} transaction{catTxs.length !== 1 ? "s" : ""}
+                  </div>
+                  {catTxs.map((tx) => (
+                    <div key={tx.id} className="flex items-center px-5 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition">
+                      <div className="flex-1">
+                        <div className="text-[13px]">
+                          {tx.description}
+                          {tx.is_recurring && <span className="text-[9px] text-bf-accent ml-1.5 font-mono">↻</span>}
+                        </div>
+                        <div className="text-[10px] text-bf-dim mt-0.5">{tx.date}</div>
+                      </div>
+                      <span className="text-[13px] font-semibold text-bf-accent2 font-mono">-{fmt(parseFloat(tx.amount))}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    })()}
   );
 }

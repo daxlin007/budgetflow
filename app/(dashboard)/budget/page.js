@@ -3,6 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import { getCategories, getTransactions, insertTransaction } from "../../lib/db";
 
+const GUIDE_TIPS = [
+  { label: "Log a single expense", examples: ["Spent $45 on groceries", "Grabbed lunch for $18", "Filled up the tank — $60"] },
+  { label: "Log multiple at once", examples: ["$60 gas and $12 coffee", "$200 Costco run and $9.99 Netflix"] },
+  { label: "Ask about your budget", examples: ["How's my grocery budget?", "Am I on track this month?", "Where am I overspending?"] },
+  { label: "Natural language works", examples: ["Weekly shop came to $95", "Car service today, set me back $180", "Date night — $75 dinner and $30 drinks"] },
+];
+
 const fmt = (n) => `$${Math.abs(n).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const nowKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
 
@@ -13,6 +20,7 @@ export default function BudgetPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const mk = nowKey();
@@ -107,11 +115,6 @@ export default function BudgetPage() {
     remaining: parseFloat(c.budget) - (catSpend[c.id] || 0),
   }));
 
-  const EXAMPLES = [
-    "Spent $45 on groceries",
-    "$60 gas and $12 coffee",
-    "How's my budget looking?",
-  ];
 
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 52px)" }}>
@@ -147,14 +150,15 @@ export default function BudgetPage() {
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 min-h-0">
         {messages.length === 0 && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-10">
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
             <div className="text-5xl mb-4">💬</div>
             <h2 className="text-lg font-semibold mb-1">Chat your spending</h2>
-            <p className="text-bf-dim text-sm mb-6 max-w-[280px]">
-              Just describe what you spent — AI categorizes it automatically.
+            <p className="text-bf-dim text-sm mb-5 max-w-[280px]">
+              Just describe what you spent in plain English — AI figures out the category and amount.
             </p>
-            <div className="flex flex-col gap-2 w-full max-w-[320px]">
-              {EXAMPLES.map((eg) => (
+            {/* Quick-start examples */}
+            <div className="flex flex-col gap-2 w-full max-w-[320px] mb-6">
+              {["Spent $45 on groceries", "$60 gas and $12 coffee", "How's my budget looking?"].map((eg) => (
                 <button
                   key={eg}
                   onClick={() => handleSend(eg)}
@@ -164,6 +168,34 @@ export default function BudgetPage() {
                 </button>
               ))}
             </div>
+            {/* Inline guide */}
+            <button
+              onClick={() => setShowGuide((v) => !v)}
+              className="text-xs text-bf-accent bg-bf-accent/[0.08] border border-bf-accent/[0.2] rounded-lg px-3 py-1.5 cursor-pointer hover:bg-bf-accent/[0.14] transition"
+            >
+              {showGuide ? "Hide tips ↑" : "What else can I say? ↓"}
+            </button>
+            {showGuide && (
+              <div className="mt-4 w-full max-w-[420px] bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 text-left">
+                <div className="text-[10px] text-bf-dim font-mono tracking-widest uppercase mb-3">What you can say</div>
+                <div className="flex flex-col gap-4">
+                  {GUIDE_TIPS.map((tip) => (
+                    <div key={tip.label}>
+                      <div className="text-[11px] font-semibold text-bf-text mb-1.5">{tip.label}</div>
+                      {tip.examples.map((ex) => (
+                        <button
+                          key={ex}
+                          onClick={() => { setShowGuide(false); handleSend(ex); }}
+                          className="block w-full text-left text-[12px] text-bf-dim bg-white/[0.02] border border-white/[0.05] rounded-lg px-3 py-2 mb-1 cursor-pointer hover:bg-white/[0.06] hover:text-bf-text transition font-mono"
+                        >
+                          "{ex}"
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -203,9 +235,43 @@ export default function BudgetPage() {
         <div ref={bottomRef} />
       </div>
 
+      {/* Guide panel — shown above input when toggled from ? button */}
+      {showGuide && messages.length > 0 && (
+        <div className="mx-4 mb-2 bg-bf-bg border border-white/[0.1] rounded-2xl p-4 shadow-xl max-h-[50vh] overflow-y-auto flex-shrink-0">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[10px] text-bf-dim font-mono tracking-widest uppercase">What you can say</div>
+            <button onClick={() => setShowGuide(false)} className="text-bf-dim hover:text-bf-text bg-transparent border-none cursor-pointer text-sm">✕</button>
+          </div>
+          <div className="flex flex-col gap-3">
+            {GUIDE_TIPS.map((tip) => (
+              <div key={tip.label}>
+                <div className="text-[11px] font-semibold text-bf-text mb-1.5">{tip.label}</div>
+                {tip.examples.map((ex) => (
+                  <button
+                    key={ex}
+                    onClick={() => { setShowGuide(false); setInput(ex); inputRef.current?.focus(); }}
+                    className="block w-full text-left text-[12px] text-bf-dim bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 mb-1 cursor-pointer hover:bg-white/[0.07] hover:text-bf-text transition font-mono"
+                  >
+                    "{ex}"
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input Bar */}
       <div className="px-4 pb-4 pt-2 border-t border-white/[0.07] flex-shrink-0">
         <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGuide((v) => !v)}
+            title="Tips & examples"
+            className={`px-3 py-3 rounded-xl border text-sm cursor-pointer transition flex-shrink-0 ${showGuide ? "bg-bf-accent/10 border-bf-accent/30 text-bf-accent" : "bg-white/[0.04] border-white/[0.07] text-bf-dim hover:text-bf-text hover:bg-white/[0.07]"}`}
+          >
+            ?
+          </button>
           <input
             ref={inputRef}
             value={input}
