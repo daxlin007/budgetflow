@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "../lib/supabase-browser";
 import { updateProfile, insertCategories, insertRecurringBatch } from "../lib/db";
 
 const DEFAULT_CATEGORIES = [
@@ -28,9 +29,21 @@ const labelCls = "text-[11px] text-bf-dim tracking-widest uppercase font-mono bl
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Check email verification status
+  useEffect(() => {
+    const checkVerification = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email_confirmed_at) {
+        router.push("/verify-email");
+      }
+    };
+    checkVerification();
+  }, [router, supabase]);
 
   // Step 1: Income
   const [income, setIncome] = useState("5500");

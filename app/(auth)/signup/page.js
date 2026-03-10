@@ -32,15 +32,15 @@ export default function SignupPage() {
       return;
     }
 
-    // After signup, go to onboarding wizard
-    router.push("/onboarding");
+    // After signup, go to email verification page
+    router.push("/verify-email");
     router.refresh();
   };
 
   const handleGoogleSignup = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/onboarding` },
+      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/verify-email` },
     });
   };
 
