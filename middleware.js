@@ -32,16 +32,24 @@ export async function middleware(request) {
   // Redirect unauthenticated users to login
   const isAuthPage =
     request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup");
+    request.nextUrl.pathname.startsWith("/signup") ||
+    request.nextUrl.pathname.startsWith("/forgot-password") ||
+    request.nextUrl.pathname.startsWith("/reset-password");
 
-  if (!user && !isAuthPage) {
+  const isOnboarding = request.nextUrl.pathname.startsWith("/onboarding");
+
+  if (!user && !isAuthPage && !isOnboarding) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from auth pages
-  if (user && isAuthPage) {
+  // Redirect authenticated users away from auth pages (but not reset-password — needs session)
+  const isPostAuthPage =
+    request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/signup");
+
+  if (user && isPostAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

@@ -1,0 +1,287 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { updateProfile, insertCategories, insertRecurringBatch } from "../lib/db";
+
+const DEFAULT_CATEGORIES = [
+  { slug: "rent", name: "Rent / Mortgage", emoji: "🏠", budget: 1800, color: "#E8927C" },
+  { slug: "groceries", name: "Groceries", emoji: "🥑", budget: 600, color: "#7CC5A8" },
+  { slug: "gas", name: "Gas / Fuel", emoji: "⛽", budget: 200, color: "#7CAFC5" },
+  { slug: "dining", name: "Dining Out", emoji: "🍽️", budget: 250, color: "#C57CA8" },
+  { slug: "utilities", name: "Utilities", emoji: "💡", budget: 250, color: "#C5B87C" },
+  { slug: "subscriptions", name: "Subscriptions", emoji: "📱", budget: 80, color: "#A87CC5" },
+  { slug: "transport", name: "Transport", emoji: "🚌", budget: 150, color: "#7CC5C5" },
+  { slug: "fun", name: "Personal / Fun", emoji: "🎯", budget: 200, color: "#C57C7C" },
+];
+
+const DEFAULT_RECURRING = [
+  { slug: "rent", description: "Rent", amount: 1800 },
+  { slug: "utilities", description: "Phone Plan", amount: 75 },
+  { slug: "subscriptions", description: "Netflix + Spotify", amount: 28.99 },
+];
+
+const STEPS = ["Welcome", "Income", "Categories", "Recurring", "Done"];
+
+const inputCls = "w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-bf-text outline-none focus:border-bf-accent/30 transition font-mono";
+const labelCls = "text-[11px] text-bf-dim tracking-widest uppercase font-mono block mb-1";
+
+export default function OnboardingPage() {
+  const router = useRouter();
+  const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  // Step 1: Income
+  const [income, setIncome] = useState("5500");
+
+  // Step 2: Categories
+  const [selectedCats, setSelectedCats] = useState(
+    DEFAULT_CATEGORIES.reduce((acc, c) => ({ ...acc, [c.slug]: true }), {})
+  );
+  const [catBudgets, setCatBudgets] = useState(
+    DEFAULT_CATEGORIES.reduce((acc, c) => ({ ...acc, [c.slug]: String(c.budget) }), {})
+  );
+
+  // Step 3: Recurring
+  const [selectedRec, setSelectedRec] = useState(
+    DEFAULT_RECURRING.reduce((acc, r) => ({ ...acc, [r.slug + r.description]: true }), {})
+  );
+  const [recAmounts, setRecAmounts] = useState(
+    DEFAULT_RECURRING.reduce((acc, r) => ({ ...acc, [r.slug + r.description]: String(r.amount) }), {})
+  );
+
+  const totalBudget = DEFAULT_CATEGORIES
+    .filter((c) => selectedCats[c.slug])
+    .reduce((s, c) => s + (parseFloat(catBudgets[c.slug]) || 0), 0);
+
+  const handleFinish = async () => {
+    setError("");
+    setSaving(true);
+    try {
+      // Save income
+      await updateProfile({ monthly_income: parseFloat(income) || 5500, onboarded: true });
+
+      // Save selected categories
+      const cats = DEFAULT_CATEGORIES
+        .filter((c) => selectedCats[c.slug])
+        .map((c) => ({ ...c, budget: parseFloat(catBudgets[c.slug]) || c.budget }));
+      const savedCats = await insertCategories(cats);
+
+      // Save selected recurring (matched to saved category IDs)
+      const catBySlug = {};
+      savedCats.forEach((c) => { catBySlug[c.slug] = c; });
+
+      const recs = DEFAULT_RECURRING
+        .filter((r) => selectedRec[r.slug + r.description])
+        .map((r) => ({
+          category_id: catBySlug[r.slug]?.id || null,
+          description: r.description,
+          amount: parseFloat(recAmounts[r.slug + r.description]) || r.amount,
+        }))
+        .filter((r) => r.category_id);
+
+      if (recs.length > 0) await insertRecurringBatch(recs);
+
+      router.push("/dashboard");
+    } catch (e) {
+      setError(e.message || "Something went wrong. Try again.");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-bf-bg text-bf-text flex flex-col items-center justify-center px-4 py-12">
+      <div className="fixed inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle, rgba(124,197,168,0.8) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+
+      <div className="w-full max-w-[480px] relative z-10">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-bf-accent to-emerald-600 inline-flex items-center justify-center text-lg font-extrabold text-bf-bg mb-3">B</div>
+          <h1 className="text-2xl font-bold tracking-tight">budget<span className="text-bf-accent">flow</span></h1>
+        </div>
+
+        {/* Step indicator */}
+        <div className="flex items-center justify-center gap-2 mb-8">
+          {STEPS.map((s, i) => (
+            <div key={s} className="flex items-center gap-2">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold font-mono transition ${i < step ? "bg-bf-accent text-bf-bg" : i === step ? "bg-bf-accent/20 border border-bf-accent text-bf-accent" : "bg-white/[0.05] border border-white/[0.1] text-bf-dim"}`}>
+                {i < step ? "✓" : i + 1}
+              </div>
+              {i < STEPS.length - 1 && <div className={`w-6 h-px ${i < step ? "bg-bf-accent/40" : "bg-white/[0.07]"}`} />}
+            </div>
+          ))}
+        </div>
+
+        {/* Card */}
+        <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-7">
+
+          {/* Step 0: Welcome */}
+          {step === 0 && (
+            <div className="text-center">
+              <div className="text-5xl mb-4">👋</div>
+              <h2 className="text-2xl font-bold mb-2">Welcome to BudgetFlow!</h2>
+              <p className="text-bf-dim text-sm leading-relaxed mb-6">
+                Let's get you set up in just 3 quick steps.<br />
+                We'll set your income, pick budget categories, and add any recurring bills.
+              </p>
+              <button
+                onClick={() => setStep(1)}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-br from-bf-accent to-emerald-600 text-bf-bg text-[15px] font-bold cursor-pointer transition hover:opacity-90"
+              >
+                Let's Go →
+              </button>
+            </div>
+          )}
+
+          {/* Step 1: Income */}
+          {step === 1 && (
+            <div>
+              <h2 className="text-xl font-bold mb-1">Monthly Income</h2>
+              <p className="text-bf-dim text-sm mb-6">Your total take-home pay per month. Used to calculate savings rate.</p>
+              <div className="mb-6">
+                <label className={labelCls}>Monthly Take-Home (after tax)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-bf-dim font-mono">$</span>
+                  <input
+                    type="number"
+                    value={income}
+                    onChange={(e) => setIncome(e.target.value)}
+                    className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl pl-8 pr-4 py-3 text-bf-text outline-none focus:border-bf-accent/30 transition font-mono text-lg"
+                    placeholder="5500"
+                    min="0"
+                  />
+                </div>
+                <p className="text-[11px] text-bf-dim mt-2">You can always change this in Settings later.</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setStep(0)} className="flex-1 py-3 rounded-xl bg-white/[0.04] border border-white/[0.07] text-bf-dim text-sm cursor-pointer hover:bg-white/[0.07] transition">← Back</button>
+                <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl bg-gradient-to-br from-bf-accent to-emerald-600 text-bf-bg text-sm font-bold cursor-pointer transition hover:opacity-90">Next →</button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Categories */}
+          {step === 2 && (
+            <div>
+              <h2 className="text-xl font-bold mb-1">Budget Categories</h2>
+              <p className="text-bf-dim text-sm mb-4">Select which categories to track and set your monthly budget for each.</p>
+
+              <div className="flex flex-col gap-2 mb-4 max-h-[340px] overflow-y-auto pr-1">
+                {DEFAULT_CATEGORIES.map((cat) => (
+                  <div
+                    key={cat.slug}
+                    className={`rounded-xl p-3 border transition cursor-pointer ${selectedCats[cat.slug] ? "border-bf-accent/30 bg-bf-accent/[0.05]" : "border-white/[0.07] bg-white/[0.02] opacity-50"}`}
+                    onClick={() => setSelectedCats((p) => ({ ...p, [cat.slug]: !p[cat.slug] }))}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded flex items-center justify-center text-[9px] border ${selectedCats[cat.slug] ? "bg-bf-accent border-bf-accent text-bf-bg" : "border-white/[0.2]"}`}>
+                          {selectedCats[cat.slug] && "✓"}
+                        </div>
+                        <span className="text-base">{cat.emoji}</span>
+                        <span className="text-sm font-medium">{cat.name}</span>
+                      </div>
+                      {selectedCats[cat.slug] && (
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <span className="text-xs text-bf-dim font-mono">$</span>
+                          <input
+                            type="number"
+                            value={catBudgets[cat.slug]}
+                            onChange={(e) => setCatBudgets((p) => ({ ...p, [cat.slug]: e.target.value }))}
+                            className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-bf-accent/30"
+                            min="0"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between py-2 border-t border-white/[0.07] mb-4">
+                <span className="text-xs text-bf-dim font-mono">Total Budget</span>
+                <span className="text-sm font-bold font-mono text-bf-accent">${totalBudget.toLocaleString("en-CA", { minimumFractionDigits: 0 })}/mo</span>
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl bg-white/[0.04] border border-white/[0.07] text-bf-dim text-sm cursor-pointer hover:bg-white/[0.07] transition">← Back</button>
+                <button onClick={() => setStep(3)} className="flex-1 py-3 rounded-xl bg-gradient-to-br from-bf-accent to-emerald-600 text-bf-bg text-sm font-bold cursor-pointer transition hover:opacity-90">Next →</button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Recurring */}
+          {step === 3 && (
+            <div>
+              <h2 className="text-xl font-bold mb-1">Recurring Expenses</h2>
+              <p className="text-bf-dim text-sm mb-5">These auto-populate at the start of every month so you don't have to add them manually.</p>
+
+              <div className="flex flex-col gap-2 mb-6">
+                {DEFAULT_RECURRING.map((rec) => {
+                  const key = rec.slug + rec.description;
+                  const catSelected = selectedCats[rec.slug];
+                  return (
+                    <div
+                      key={key}
+                      className={`rounded-xl p-3 border transition ${!catSelected ? "opacity-30 pointer-events-none" : selectedRec[key] ? "border-bf-accent/30 bg-bf-accent/[0.05] cursor-pointer" : "border-white/[0.07] bg-white/[0.02] opacity-50 cursor-pointer"}`}
+                      onClick={() => catSelected && setSelectedRec((p) => ({ ...p, [key]: !p[key] }))}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded flex items-center justify-center text-[9px] border ${selectedRec[key] ? "bg-bf-accent border-bf-accent text-bf-bg" : "border-white/[0.2]"}`}>
+                            {selectedRec[key] && "✓"}
+                          </div>
+                          <span className="text-sm font-medium">{rec.description}</span>
+                          <span className="text-[10px] text-bf-dim font-mono">
+                            {DEFAULT_CATEGORIES.find((c) => c.slug === rec.slug)?.emoji}
+                          </span>
+                        </div>
+                        {selectedRec[key] && (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <span className="text-xs text-bf-dim font-mono">$</span>
+                            <input
+                              type="number"
+                              value={recAmounts[key]}
+                              onChange={(e) => setRecAmounts((p) => ({ ...p, [key]: e.target.value }))}
+                              className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-bf-accent/30"
+                              min="0"
+                              step="0.01"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      {!catSelected && <p className="text-[10px] text-bf-dim mt-1 ml-6">Enable the "{DEFAULT_CATEGORIES.find((c) => c.slug === rec.slug)?.name}" category first.</p>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {error && (
+                <div className="text-sm text-bf-accent2 px-3 py-2 bg-bf-accent2/[0.08] rounded-lg border border-bf-accent2/[0.15] mb-4">{error}</div>
+              )}
+
+              <div className="flex gap-3">
+                <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl bg-white/[0.04] border border-white/[0.07] text-bf-dim text-sm cursor-pointer hover:bg-white/[0.07] transition">← Back</button>
+                <button
+                  onClick={handleFinish}
+                  disabled={saving}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-br from-bf-accent to-emerald-600 text-bf-bg text-sm font-bold cursor-pointer disabled:opacity-50 transition hover:opacity-90"
+                >
+                  {saving ? "Setting up..." : "Finish Setup →"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <p className="text-center text-xs text-bf-dim mt-4">
+          Already set up?{" "}
+          <button onClick={() => router.push("/dashboard")} className="text-bf-accent bg-transparent border-none cursor-pointer">
+            Skip to dashboard →
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}

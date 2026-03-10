@@ -210,6 +210,106 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Advanced Analytics */}
+      {sTxs.length > 0 && (() => {
+        // Weekday spending
+        const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const dayTotals = Array(7).fill(0);
+        sTxs.forEach((t) => {
+          const dow = new Date(t.date + "T12:00:00").getDay();
+          dayTotals[dow] += parseFloat(t.amount);
+        });
+        const maxDay = Math.max(...dayTotals, 1);
+        const topDayIdx = dayTotals.indexOf(Math.max(...dayTotals));
+
+        // Recurring vs one-time
+        const recurringTotal = sTxs.filter((t) => t.is_recurring).reduce((s, t) => s + parseFloat(t.amount), 0);
+        const oneTimeTotal = sTxs.filter((t) => !t.is_recurring).reduce((s, t) => s + parseFloat(t.amount), 0);
+        const recurringPct = sTotalSpent > 0 ? (recurringTotal / sTotalSpent) * 100 : 0;
+
+        // Budget efficiency score: % of categories that are under budget (with spend > 0)
+        const activeWithBudget = sorted.filter((c) => c.spent > 0 && parseFloat(c.budget) > 0);
+        const underBudget = activeWithBudget.filter((c) => c.spent <= parseFloat(c.budget));
+        const effScore = activeWithBudget.length > 0 ? Math.round((underBudget.length / activeWithBudget.length) * 100) : 100;
+        const effColor = effScore >= 80 ? "text-bf-accent" : effScore >= 50 ? "text-bf-warn" : "text-bf-accent2";
+
+        return (
+          <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5 mb-4">
+            <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono mb-4">Spending Insights</div>
+            <div className="flex gap-4 flex-wrap">
+
+              {/* Weekday Breakdown */}
+              <div className="flex-1 min-w-[180px]">
+                <div className="text-[10px] text-bf-dim font-mono mb-3">By Day of Week</div>
+                <div className="flex items-end gap-1 h-[70px]">
+                  {DAYS.map((d, i) => {
+                    const h = maxDay > 0 ? Math.max((dayTotals[i] / maxDay) * 60, dayTotals[i] > 0 ? 4 : 0) : 0;
+                    const isTop = i === topDayIdx && dayTotals[i] > 0;
+                    return (
+                      <div key={d} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="w-full rounded-[3px] transition-all duration-500" style={{
+                          height: h,
+                          background: isTop ? "linear-gradient(180deg,#7CC5A8,rgba(124,197,168,0.3))" : "rgba(255,255,255,0.08)"
+                        }} />
+                        <span className={`text-[9px] font-mono ${isTop ? "text-bf-accent font-bold" : "text-bf-dim"}`}>{d}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {dayTotals[topDayIdx] > 0 && (
+                  <p className="text-[10px] text-bf-dim mt-2">
+                    Highest spend on <span className="text-bf-text font-medium">{DAYS[topDayIdx]}</span> — {fmt(dayTotals[topDayIdx])}
+                  </p>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="w-px bg-white/[0.07] hidden sm:block" />
+
+              {/* Recurring vs One-Time */}
+              <div className="flex-1 min-w-[140px]">
+                <div className="text-[10px] text-bf-dim font-mono mb-3">Recurring vs One-Time</div>
+                <div className="h-2 rounded-full overflow-hidden bg-white/[0.05] mb-3">
+                  <div className="h-full bg-bf-accent/60 transition-all duration-700" style={{ width: `${recurringPct}%` }} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-bf-accent/60" />
+                      <span className="text-[11px] text-bf-dim">Recurring</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-bf-text">{fmt(recurringTotal)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-white/[0.2]" />
+                      <span className="text-[11px] text-bf-dim">One-Time</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-bf-text">{fmt(oneTimeTotal)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="w-px bg-white/[0.07] hidden sm:block" />
+
+              {/* Budget Efficiency */}
+              <div className="flex-1 min-w-[120px] flex flex-col items-center justify-center">
+                <div className="text-[10px] text-bf-dim font-mono mb-2">Budget Efficiency</div>
+                <div className={`text-4xl font-bold font-mono ${effColor}`}>{effScore}%</div>
+                <div className="text-[10px] text-bf-dim mt-1 text-center">
+                  {underBudget.length}/{activeWithBudget.length} categories under budget
+                </div>
+                <div className={`text-[10px] font-medium mt-2 ${effColor}`}>
+                  {effScore >= 80 ? "Excellent control" : effScore >= 50 ? "Room to improve" : "Over budget"}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Recent Transactions */}
       <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5">
         <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono mb-3">Transactions — {mkShort(selMonth)}</div>
