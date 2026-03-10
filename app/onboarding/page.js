@@ -77,15 +77,19 @@ export default function OnboardingPage() {
       (savedCats || []).forEach((c) => { if (c && c.slug) catBySlug[c.slug] = c; });
 
       const recs = DEFAULT_RECURRING
-        .filter((r) => selectedRec[r.slug + r.description])
+        .filter((r) => selectedRec[r.slug + r.description] && catBySlug[r.slug])
         .map((r) => ({
-          category_id: catBySlug[r.slug]?.id || null,
+          category_id: catBySlug[r.slug].id,
           description: r.description,
           amount: parseFloat(recAmounts[r.slug + r.description]) || r.amount,
-        }))
-        .filter((r) => r.category_id);
+        }));
 
-      if (recs.length > 0) await insertRecurringBatch(recs);
+      if (recs.length > 0) {
+        const savedRecs = await insertRecurringBatch(recs);
+        if (!savedRecs || !Array.isArray(savedRecs)) {
+          console.warn("Recurring expenses created but response was invalid");
+        }
+      }
 
       router.push("/dashboard");
     } catch (e) {
