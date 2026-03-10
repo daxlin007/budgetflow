@@ -1,5 +1,6 @@
 import "./globals.css";
 import ServiceWorkerRegister from "./ServiceWorkerRegister";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata = {
   title: "BudgetFlow — AI-Powered Household Budget Tracker",
@@ -38,6 +39,7 @@ export default function RootLayout({ children }) {
       <body className="bg-bf-bg text-bf-text font-sans antialiased">
         <ServiceWorkerRegister />
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
