@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase-browser";
+import { updateProfile } from "../../lib/db";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -32,7 +35,15 @@ export default function SignupPage() {
       return;
     }
 
-    // After signup, go to onboarding
+    // Save location to profile so the AI can contextualise local stores/merchants
+    if (country || city) {
+      try {
+        await updateProfile({ country: country.trim() || null, city: city.trim() || null });
+      } catch (_) {
+        // Non-fatal — profile can be updated later in Setup
+      }
+    }
+
     router.push("/dashboard");
     router.refresh();
   };
@@ -57,15 +68,32 @@ export default function SignupPage() {
               className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-bf-text outline-none focus:border-bf-accent/30 transition" />
           </div>
           <div>
-            <label className="text-[11px] text-bf-dim tracking-widest uppercase font-mono block mb-1">Email</label>
+            <label className="text-[11px] text-bf-dim tracking-widests uppercase font-mono block mb-1">Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com"
               className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-bf-text outline-none focus:border-bf-accent/30 transition" />
           </div>
           <div>
-            <label className="text-[11px] text-bf-dim tracking-widest uppercase font-mono block mb-1">Password</label>
+            <label className="text-[11px] text-bf-dim tracking-widests uppercase font-mono block mb-1">Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimum 6 characters"
               className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-bf-text outline-none focus:border-bf-accent/30 transition" />
           </div>
+
+          {/* Location — helps the AI recognise local stores & merchants */}
+          <div className="flex gap-2.5 mt-0.5">
+            <div className="flex-1">
+              <label className="text-[11px] text-bf-dim tracking-widests uppercase font-mono block mb-1">Country</label>
+              <input value={country} onChange={e => setCountry(e.target.value)} placeholder="Canada"
+                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-bf-text outline-none focus:border-bf-accent/30 transition" />
+            </div>
+            <div className="flex-1">
+              <label className="text-[11px] text-bf-dim tracking-widests uppercase font-mono block mb-1">City</label>
+              <input value={city} onChange={e => setCity(e.target.value)} placeholder="Toronto"
+                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-bf-text outline-none focus:border-bf-accent/30 transition" />
+            </div>
+          </div>
+          <p className="text-[10px] text-bf-dim -mt-1 px-0.5">
+            Optional — lets the AI recognise local store names automatically.
+          </p>
 
           {error && (
             <div className="text-sm text-bf-accent2 px-3 py-2 bg-bf-accent2/[0.08] rounded-lg border border-bf-accent2/[0.15]">{error}</div>
