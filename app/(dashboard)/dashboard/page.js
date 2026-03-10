@@ -187,8 +187,10 @@ export default function DashboardPage() {
         <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono mb-3">By Category</div>
         <div className="flex flex-col gap-2.5">
           {sorted.map((cat) => {
-            const pct = parseFloat(cat.budget) > 0 ? (cat.spent / parseFloat(cat.budget)) * 100 : 0;
-            const over = cat.spent > parseFloat(cat.budget);
+            const budget = parseFloat(cat.budget) || 0;
+            const pct = budget > 0 ? (cat.spent / budget) * 100 : 0;
+            const over = cat.spent > budget;
+            const remaining = budget - cat.spent;
             return (
               <div key={cat.id}>
                 <div className="flex justify-between items-center mb-1">
@@ -196,9 +198,18 @@ export default function DashboardPage() {
                     <span className="text-[15px]">{cat.emoji}</span>
                     <span className="text-[13px] font-medium">{cat.name}</span>
                   </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className={`text-[13px] font-semibold font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "" : "text-bf-dim"}`}>{fmt(cat.spent)}</span>
-                    <span className="text-[10px] text-bf-dim font-mono">/ {fmtShort(parseFloat(cat.budget))}</span>
+                  <div className="flex items-center gap-3">
+                    {/* Remaining / over — the at-a-glance number */}
+                    {budget > 0 && (
+                      <span className={`text-[12px] font-semibold font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "text-bf-accent" : "text-bf-dim"}`}>
+                        {over ? `-${fmt(Math.abs(remaining))} over` : `${fmt(remaining)} left`}
+                      </span>
+                    )}
+                    {/* Spent / budget */}
+                    <div className="flex items-baseline gap-1 text-right">
+                      <span className={`text-[12px] font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "text-bf-dim" : "text-bf-dim"}`}>{fmt(cat.spent)}</span>
+                      <span className="text-[10px] text-bf-dim font-mono">/ {fmtShort(budget)}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="h-1 rounded-sm bg-white/[0.05] overflow-hidden">
