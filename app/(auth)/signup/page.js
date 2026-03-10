@@ -20,16 +20,32 @@ export default function SignupPage() {
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } },
     });
 
-    if (error) {
-      setError(error.message);
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
       return;
+    }
+
+    // Create profile for new user
+    if (authData?.user?.id) {
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          id: authData.user.id,
+          name,
+          onboarded: false,
+        });
+
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        // Continue anyway - user can still login
+      }
     }
 
     // Redirect to login to verify email

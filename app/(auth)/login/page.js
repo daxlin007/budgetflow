@@ -28,20 +28,30 @@ export default function LoginPage() {
 
     // Check if user has completed onboarding
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("onboarded")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.onboarded) {
-        router.push("/onboarding");
-      } else {
-        router.push("/dashboard");
-      }
+    if (!user) {
+      setError("Failed to get user");
+      setLoading(false);
+      return;
     }
-    router.refresh();
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("onboarded")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      console.error("Profile fetch error:", profileError);
+      // If profile doesn't exist yet, send to onboarding
+      router.push("/onboarding");
+      return;
+    }
+
+    if (profile?.onboarded) {
+      router.push("/dashboard");
+    } else {
+      router.push("/onboarding");
+    }
   };
 
   const handleGoogleLogin = async () => {
