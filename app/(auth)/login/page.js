@@ -26,14 +26,28 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // Check if user has completed onboarding
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarded")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.onboarded) {
+        router.push("/onboarding");
+      } else {
+        router.push("/dashboard");
+      }
+    }
     router.refresh();
   };
 
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard` },
+      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/onboarding` },
     });
   };
 

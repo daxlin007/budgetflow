@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { getCategories, getAllTransactions, getProfile } from "../../lib/db";
 
 const fmt = (n) => `$${Math.abs(n).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -12,6 +13,7 @@ const shiftMk = (k, d) => { const [y, m] = k.split("-").map(Number); const dt = 
 const last6 = (k) => { const a = []; for (let i = 5; i >= 0; i--) a.push(shiftMk(k, -i)); return a; };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [cats, setCats] = useState([]);
   const [txs, setTxs] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -21,9 +23,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     Promise.all([getCategories(), getAllTransactions(), getProfile()])
-      .then(([c, t, p]) => { setCats(c || []); setTxs(t || []); setProfile(p); setLoading(false); })
+      .then(([c, t, p]) => {
+        if (!p?.onboarded) {
+          router.push("/onboarding");
+          return;
+        }
+        setCats(c || []);
+        setTxs(t || []);
+        setProfile(p);
+        setLoading(false);
+      })
       .catch((e) => { console.error(e); setLoading(false); });
-  }, []);
+  }, [router]);
 
   if (loading) {
     return (

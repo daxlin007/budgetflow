@@ -34,15 +34,23 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Check email verification status
+  // Check if already onboarded and redirect to dashboard
   useEffect(() => {
-    const checkVerification = async () => {
+    const checkOnboarding = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email_confirmed_at) {
-        router.push("/verify-email");
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("onboarded")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.onboarded) {
+          router.push("/dashboard");
+        }
       }
     };
-    checkVerification();
+    checkOnboarding();
   }, [router, supabase]);
 
   // Step 1: Income
