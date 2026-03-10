@@ -10,6 +10,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -32,9 +33,14 @@ export default function SignupPage() {
       return;
     }
 
-    // After signup, go to email verification page
-    router.push("/verify-email");
-    router.refresh();
+    // Show success message
+    setSignupSuccess(true);
+
+    // After 2 seconds, redirect to email verification
+    setTimeout(() => {
+      router.push("/verify-email");
+      router.refresh();
+    }, 2000);
   };
 
   const handleGoogleSignup = async () => {
@@ -54,10 +60,24 @@ export default function SignupPage() {
           <h1 className="text-3xl font-bold tracking-tight">
             budget<span className="text-bf-accent">flow</span>
           </h1>
-          <p className="text-sm text-bf-dim mt-2">Create your account to get started.</p>
+          <p className="text-sm text-bf-dim mt-2">{signupSuccess ? "Verify your email to continue" : "Create your account to get started."}</p>
         </div>
 
-        <form onSubmit={handleSignup} className="flex flex-col gap-3">
+        {signupSuccess ? (
+          <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-7 text-center">
+            <div className="text-5xl mb-4 animate-pulse">✓</div>
+            <h2 className="text-xl font-semibold mb-2">Account Created!</h2>
+            <p className="text-sm text-bf-dim mb-6">
+              A verification email has been sent to<br />
+              <span className="font-mono text-bf-accent">{email}</span>
+            </p>
+            <p className="text-xs text-bf-dim mb-4">
+              Redirecting to email verification...
+            </p>
+            <div className="w-8 h-8 border-2 border-bf-accent/20 border-t-bf-accent rounded-full animate-spin mx-auto" />
+          </div>
+        ) : (
+          <form onSubmit={handleSignup} className="flex flex-col gap-3">
           <div>
             <label className="text-[11px] text-bf-dim tracking-widest uppercase font-mono block mb-1">Full Name</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="David"
@@ -104,12 +124,15 @@ export default function SignupPage() {
           </button>
         </form>
 
-        <div className="text-center mt-5">
-          <span className="text-sm text-bf-dim">Already have an account? </span>
-          <button onClick={() => router.push("/login")} className="text-sm text-bf-accent font-semibold bg-transparent border-none cursor-pointer">
-            Sign In
-          </button>
-        </div>
+        {!signupSuccess && (
+          <div className="text-center mt-5">
+            <span className="text-sm text-bf-dim">Already have an account? </span>
+            <button onClick={() => router.push("/login")} className="text-sm text-bf-accent font-semibold bg-transparent border-none cursor-pointer">
+              Sign In
+            </button>
+          </div>
+        )}
+        )}
       </div>
     </div>
   );

@@ -69,10 +69,26 @@ export default function VerifyEmailPage() {
 
       <div className="w-full max-w-[400px] relative z-10">
         {verified ? (
-          <div className="text-center">
-            <div className="text-5xl mb-4 animate-pulse">✓</div>
-            <h1 className="text-2xl font-bold mb-2">Email Verified!</h1>
-            <p className="text-bf-dim mb-6">Redirecting you to setup...</p>
+          <div>
+            <div className="text-center mb-8">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-bf-accent to-emerald-600 inline-flex items-center justify-center text-2xl font-extrabold text-bf-bg mb-4">B</div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                budget<span className="text-bf-accent">flow</span>
+              </h1>
+            </div>
+
+            <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-7 text-center">
+              <div className="text-5xl mb-4 animate-bounce">✓</div>
+              <h2 className="text-2xl font-bold mb-2">Email Verified!</h2>
+              <p className="text-sm text-bf-dim mb-2">Your email is confirmed</p>
+              <p className="text-xs text-bf-dim mb-6">
+                Get ready to set up your budget in just a few quick steps.
+              </p>
+              <div className="flex items-center justify-center gap-2 text-sm text-bf-accent mb-6">
+                <span>Setting up your budget</span>
+                <div className="w-5 h-5 border-2 border-bf-accent/20 border-t-bf-accent rounded-full animate-spin" />
+              </div>
+            </div>
           </div>
         ) : (
           <div>
@@ -88,12 +104,23 @@ export default function VerifyEmailPage() {
               <div className="text-center mb-6">
                 <div className="text-4xl mb-3">📧</div>
                 <h2 className="text-lg font-semibold mb-2">Check your inbox</h2>
-                <p className="text-sm text-bf-dim mb-4">
+                <p className="text-sm text-bf-dim mb-1">
                   We've sent a verification email to<br />
                   <span className="font-mono text-bf-accent">{email}</span>
                 </p>
+                <p className="text-xs text-bf-dim mb-4">
+                  Click the link to verify your email address.
+                </p>
+
+                <div className="bg-bf-accent/[0.06] border border-bf-accent/[0.2] rounded-lg p-3 mb-4">
+                  <p className="text-xs text-bf-dim">
+                    <span className="text-bf-accent font-semibold">What happens next:</span><br />
+                    After verification, you'll complete a quick setup to configure your budget categories and recurring expenses.
+                  </p>
+                </div>
+
                 <p className="text-xs text-bf-dim">
-                  Click the link in the email to verify your account. We're automatically checking — you'll be redirected as soon as it's verified.
+                  We're automatically checking for verification — you'll be redirected as soon as it's confirmed.
                 </p>
               </div>
 
