@@ -101,6 +101,10 @@ export default function OnboardingPage() {
   const [recAmounts, setRecAmounts] = useState(
     DEFAULT_RECURRING.reduce((acc, r) => ({ ...acc, [r.slug + r.description]: String(r.amount) }), {})
   );
+  const [customRec, setCustomRec] = useState([]);
+  const [newRecDesc, setNewRecDesc] = useState("");
+  const [newRecAmount, setNewRecAmount] = useState("0");
+  const [newRecCat, setNewRecCat] = useState("");
 
   const totalBudget = DEFAULT_CATEGORIES
     .filter((c) => selectedCats[c.slug])
@@ -132,6 +136,42 @@ export default function OnboardingPage() {
     setSelectedCats((p) => ({ ...p, [slug]: !p[slug] }));
   };
 
+  // Get all available categories for recurring expenses (selected defaults + custom)
+  const getAvailableCategories = () => {
+    const availableDefaults = DEFAULT_CATEGORIES.filter((c) => selectedCats[c.slug]);
+    return [...availableDefaults, ...customCats];
+  };
+
+  const addCustomRecurring = () => {
+    if (!newRecDesc.trim()) {
+      setError("Description is required");
+      return;
+    }
+    if (!newRecCat) {
+      setError("Please select a category");
+      return;
+    }
+    const catObj = getAvailableCategories().find((c) => c.slug === newRecCat);
+    if (!catObj) {
+      setError("Selected category not available");
+      return;
+    }
+    setCustomRec([...customRec, {
+      slug: newRecCat,
+      description: newRecDesc,
+      amount: parseFloat(newRecAmount) || 0,
+      emoji: catObj.emoji
+    }]);
+    setNewRecDesc("");
+    setNewRecAmount("0");
+    setNewRecCat("");
+    setError("");
+  };
+
+  const removeCustomRecurring = (idx) => {
+    setCustomRec(customRec.filter((_, i) => i !== idx));
+  };
+
   const handleFinish = async () => {
     setError("");
     setSaving(true);
@@ -154,7 +194,7 @@ export default function OnboardingPage() {
       const catBySlug = {};
       (savedCats || []).forEach((c) => { if (c && c.slug) catBySlug[c.slug] = c; });
 
-      const recs = DEFAULT_RECURRING
+      const defaultRecs = DEFAULT_RECURRING
         .filter((r) => selectedRec[r.slug + r.description] && catBySlug[r.slug])
         .map((r) => ({
           category_id: catBySlug[r.slug].id,
@@ -162,8 +202,17 @@ export default function OnboardingPage() {
           amount: parseFloat(recAmounts[r.slug + r.description]) || r.amount,
         }));
 
-      if (recs.length > 0) {
-        const savedRecs = await insertRecurringBatch(recs);
+      const customRecs = customRec
+        .filter((r) => catBySlug[r.slug])
+        .map((r) => ({
+          category_id: catBySlug[r.slug].id,
+          description: r.description,
+          amount: parseFloat(r.amount) || 0,
+        }));
+
+      const allRecs = [...defaultRecs, ...customRecs];
+      if (allRecs.length > 0) {
+        const savedRecs = await insertRecurringBatch(allRecs);
         if (!savedRecs || !Array.isArray(savedRecs)) {
           console.warn("Recurring expenses created but response was invalid");
         }
@@ -253,42 +302,41 @@ export default function OnboardingPage() {
               <h2 className="text-xl font-bold mb-1">Budget Categories</h2>
               <p className="text-bf-dim text-sm mb-3">Select which categories to track and set your monthly budget for each.</p>
 
-              {/* Add Custom Category Form - Always Visible */}
-              <div className="bg-bf-accent/[0.08] border border-bf-accent/30 rounded-xl p-3 mb-3">
-                <p className="text-xs text-bf-dim font-mono uppercase tracking-widest mb-2">➕ Add Custom Category</p>
-                <input
-                  type="text"
-                  placeholder="Name (e.g., Insurance)"
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm mb-2 outline-none focus:border-bf-accent/30 transition"
-                />
-                <div className="flex gap-2">
+              {/* Add Custom Category Form - Compact */}
+              <div className="bg-bf-accent/[0.06] border border-bf-accent/20 rounded-lg p-2 mb-3">
+                <div className="grid grid-cols-4 gap-1.5">
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    className="col-span-2 bg-white/[0.04] border border-white/[0.07] rounded px-2 py-1 text-xs outline-none focus:border-bf-accent/30"
+                  />
                   <input
                     type="text"
                     placeholder="🎯"
                     value={newCatEmoji}
                     onChange={(e) => setNewCatEmoji(e.target.value.slice(0, 2))}
                     maxLength="2"
-                    className="w-12 bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-2 text-sm text-center outline-none focus:border-bf-accent/30 transition"
+                    className="bg-white/[0.04] border border-white/[0.07] rounded px-2 py-1 text-xs text-center outline-none focus:border-bf-accent/30"
                   />
                   <input
                     type="number"
-                    placeholder="0"
+                    placeholder="$"
                     value={newCatBudget}
                     onChange={(e) => setNewCatBudget(e.target.value)}
                     min="0"
-                    className="flex-1 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm outline-none focus:border-bf-accent/30 transition"
+                    className="bg-white/[0.04] border border-white/[0.07] rounded px-2 py-1 text-xs outline-none focus:border-bf-accent/30"
                   />
                   <button
                     onClick={addCustomCategory}
-                    className="px-4 py-2 rounded-lg bg-bf-accent text-bf-bg hover:opacity-90 transition text-sm font-bold"
+                    className="col-span-4 px-2 py-1 rounded bg-bf-accent/20 text-bf-accent hover:bg-bf-accent/30 transition text-xs font-semibold"
                   >
-                    Add
+                    ➕ Add Category
                   </button>
                 </div>
                 {error && (
-                  <p className="text-xs text-bf-accent2 mt-2">{error}</p>
+                  <p className="text-xs text-bf-accent2 mt-1">{error}</p>
                 )}
               </div>
 
@@ -379,55 +427,141 @@ export default function OnboardingPage() {
 
           {/* Step 3: Recurring */}
           {step === 3 && (
-            <div>
+            <div className="flex flex-col h-[520px]">
               <h2 className="text-xl font-bold mb-1">Recurring Expenses</h2>
-              <p className="text-bf-dim text-sm mb-5">These auto-populate at the start of every month so you don't have to add them manually.</p>
+              <p className="text-bf-dim text-sm mb-3">These auto-populate at the start of every month so you don't have to add them manually.</p>
 
-              <div className="flex flex-col gap-2 mb-6">
-                {DEFAULT_RECURRING.map((rec) => {
-                  const key = rec.slug + rec.description;
-                  const catSelected = selectedCats[rec.slug];
-                  return (
-                    <div
-                      key={key}
-                      className={`rounded-xl p-3 border transition ${!catSelected ? "opacity-30 pointer-events-none" : selectedRec[key] ? "border-bf-accent/30 bg-bf-accent/[0.05] cursor-pointer" : "border-white/[0.07] bg-white/[0.02] opacity-50 cursor-pointer"}`}
-                      onClick={() => catSelected && setSelectedRec((p) => ({ ...p, [key]: !p[key] }))}
+              {/* Add Custom Recurring Form */}
+              {getAvailableCategories().length > 0 && (
+                <div className="bg-bf-accent/[0.06] border border-bf-accent/20 rounded-lg p-2 mb-3">
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="Description"
+                      value={newRecDesc}
+                      onChange={(e) => setNewRecDesc(e.target.value)}
+                      className="flex-1 bg-white/[0.04] border border-white/[0.07] rounded px-2 py-1 text-xs outline-none focus:border-bf-accent/30"
+                    />
+                    <select
+                      value={newRecCat}
+                      onChange={(e) => setNewRecCat(e.target.value)}
+                      className="bg-white/[0.04] border border-white/[0.07] rounded px-2 py-1 text-xs outline-none focus:border-bf-accent/30"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-4 h-4 rounded flex items-center justify-center text-[9px] border ${selectedRec[key] ? "bg-bf-accent border-bf-accent text-bf-bg" : "border-white/[0.2]"}`}>
-                            {selectedRec[key] && "✓"}
-                          </div>
-                          <span className="text-sm font-medium">{rec.description}</span>
-                          <span className="text-[10px] text-bf-dim font-mono">
-                            {DEFAULT_CATEGORIES.find((c) => c.slug === rec.slug)?.emoji}
-                          </span>
-                        </div>
-                        {selectedRec[key] && (
-                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <span className="text-xs text-bf-dim font-mono">$</span>
-                            <input
-                              type="number"
-                              value={recAmounts[key]}
-                              onChange={(e) => setRecAmounts((p) => ({ ...p, [key]: e.target.value }))}
-                              className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-bf-accent/30"
-                              min="0"
-                              step="0.01"
-                            />
-                          </div>
-                        )}
-                      </div>
-                      {!catSelected && <p className="text-[10px] text-bf-dim mt-1 ml-6">Enable the "{DEFAULT_CATEGORIES.find((c) => c.slug === rec.slug)?.name}" category first.</p>}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {error && (
-                <div className="text-sm text-bf-accent2 px-3 py-2 bg-bf-accent2/[0.08] rounded-lg border border-bf-accent2/[0.15] mb-4">{error}</div>
+                      <option value="">Select Category</option>
+                      {getAvailableCategories().map((cat) => (
+                        <option key={cat.slug} value={cat.slug}>
+                          {cat.emoji} {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="$"
+                      value={newRecAmount}
+                      onChange={(e) => setNewRecAmount(e.target.value)}
+                      min="0"
+                      step="0.01"
+                      className="w-20 bg-white/[0.04] border border-white/[0.07] rounded px-2 py-1 text-xs outline-none focus:border-bf-accent/30"
+                    />
+                    <button
+                      onClick={addCustomRecurring}
+                      className="px-2 py-1 rounded bg-bf-accent/20 text-bf-accent hover:bg-bf-accent/30 transition text-xs font-semibold"
+                    >
+                      ➕
+                    </button>
+                  </div>
+                  {error && (
+                    <p className="text-xs text-bf-accent2 mt-1">{error}</p>
+                  )}
+                </div>
               )}
 
-              <div className="flex gap-3">
+              {/* Scrollable Recurring List */}
+              <div className="flex-1 overflow-y-auto pr-1">
+                <div className="flex flex-col gap-2">
+                  {/* Custom Recurring */}
+                  {customRec.length > 0 && (
+                    <>
+                      <p className="text-xs text-bf-dim font-mono uppercase tracking-widest sticky top-0 bg-white/[0.03] py-1 px-1">Your Recurring ({customRec.length})</p>
+                      {customRec.map((rec, idx) => (
+                        <div key={`custom-rec-${idx}`} className="rounded-xl p-3 border border-bf-accent/30 bg-bf-accent/[0.05]">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">{rec.emoji}</span>
+                              <div>
+                                <p className="text-sm font-medium">{rec.description}</p>
+                                <p className="text-xs text-bf-dim">{getAvailableCategories().find((c) => c.slug === rec.slug)?.name}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={rec.amount}
+                                onChange={(e) => setCustomRec(customRec.map((r, i) => i === idx ? { ...r, amount: parseFloat(e.target.value) || 0 } : r))}
+                                className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-bf-accent/30"
+                                min="0"
+                                step="0.01"
+                              />
+                              <button
+                                onClick={() => removeCustomRecurring(idx)}
+                                className="text-bf-dim hover:text-bf-accent2 transition text-lg leading-none"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Default Recurring */}
+                  {DEFAULT_RECURRING.length > 0 && (
+                    <p className="text-xs text-bf-dim font-mono uppercase tracking-widest sticky top-0 bg-white/[0.03] py-1 px-1 mt-2">{customRec.length > 0 ? "Default Recurring" : "Available Recurring"}</p>
+                  )}
+                  {DEFAULT_RECURRING.map((rec) => {
+                    const key = rec.slug + rec.description;
+                    const cat = DEFAULT_CATEGORIES.find((c) => c.slug === rec.slug);
+                    const catSelected = selectedCats[rec.slug];
+                    return (
+                      <div
+                        key={key}
+                        className={`rounded-xl p-3 border transition ${!catSelected ? "opacity-30 pointer-events-none" : selectedRec[key] ? "border-bf-accent/30 bg-bf-accent/[0.05] cursor-pointer" : "border-white/[0.07] bg-white/[0.02] opacity-50 cursor-pointer"}`}
+                        onClick={() => catSelected && setSelectedRec((p) => ({ ...p, [key]: !p[key] }))}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center text-[9px] border ${selectedRec[key] ? "bg-bf-accent border-bf-accent text-bf-bg" : "border-white/[0.2]"}`}>
+                              {selectedRec[key] && "✓"}
+                            </div>
+                            <span className="text-base">{cat?.emoji}</span>
+                            <div>
+                              <p className="text-sm font-medium">{rec.description}</p>
+                              <p className="text-xs text-bf-dim">{cat?.name}</p>
+                            </div>
+                          </div>
+                          {selectedRec[key] && (
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <span className="text-xs text-bf-dim font-mono">$</span>
+                              <input
+                                type="number"
+                                value={recAmounts[key]}
+                                onChange={(e) => setRecAmounts((p) => ({ ...p, [key]: e.target.value }))}
+                                className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-bf-accent/30"
+                                min="0"
+                                step="0.01"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        {!catSelected && <p className="text-[10px] text-bf-dim mt-1 ml-6">Enable the "{cat?.name}" category first.</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-3">
                 <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl bg-white/[0.04] border border-white/[0.07] text-bf-dim text-sm cursor-pointer hover:bg-white/[0.07] transition">← Back</button>
                 <button
                   onClick={handleFinish}
