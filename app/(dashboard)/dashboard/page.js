@@ -6,6 +6,18 @@ import { getCategories, getAllTransactions, getProfile } from "../../lib/db";
 const fmt = (n) => `$${Math.abs(n).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtShort = (n) => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(0)}`);
 const nowKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+
+// Returns a color for over-budget states:
+//   0–24 % over  →  orange  (#E8927C)
+//  25–49 % over  →  red     (#D64545)
+//  50 %+  over  →  deep red (#B91C1C)
+const overColor = (spent, budget) => {
+  if (!budget || spent <= budget) return null;
+  const ratio = (spent - budget) / budget;
+  if (ratio >= 0.5) return "#B91C1C";
+  if (ratio >= 0.25) return "#D64545";
+  return "#E8927C";
+};
 const mkLabel = (k) => { const [y, m] = k.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-CA", { month: "long", year: "numeric" }); };
 const mkShort = (k) => { const [y, m] = k.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-CA", { month: "short" }); };
 const shiftMk = (k, d) => { const [y, m] = k.split("-").map(Number); const dt = new Date(y, m - 1 + d, 1); return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`; };
@@ -196,6 +208,7 @@ export default function DashboardPage() {
             const remaining = budget - cat.spent;
             const over = remaining < 0;
             const exact = remaining === 0 && budget > 0;
+            const oc = overColor(cat.spent, budget); // null when not over
             return (
               <div
                 key={cat.id}
@@ -208,7 +221,10 @@ export default function DashboardPage() {
                     <span className="text-[13px] font-medium group-hover:text-bf-accent transition">{cat.name}</span>
                   </div>
                   <div className="text-right">
-                    <div className={`text-[13px] font-bold font-mono leading-none ${over ? "text-bf-accent2" : exact ? "text-bf-warn" : cat.spent > 0 ? "text-bf-accent" : "text-bf-dim"}`}>
+                    <div
+                      className="text-[13px] font-bold font-mono leading-none"
+                      style={{ color: oc ?? (exact ? "#C5B87C" : cat.spent > 0 ? "#7CC5A8" : "rgba(232,230,225,0.38)") }}
+                    >
                       {over
                         ? `${fmt(Math.abs(remaining))} over`
                         : exact
@@ -225,7 +241,7 @@ export default function DashboardPage() {
                 <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%`, background: over ? "#E8927C" : exact ? "#C5B87C" : cat.color }}
+                    style={{ width: `${pct}%`, background: oc ?? (exact ? "#C5B87C" : cat.color) }}
                   />
                 </div>
               </div>
@@ -266,6 +282,7 @@ export default function DashboardPage() {
         const rem    = budget - spent;
         const over   = rem < 0;
         const pct    = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+        const oc     = overColor(spent, budget);
         const catTxs = sTxs
           .filter((t) => t.category_id === drillCat.id)
           .sort((a, b) => b.date.localeCompare(a.date));
@@ -308,7 +325,10 @@ export default function DashboardPage() {
                   <div className="text-[10px] text-bf-dim tracking-widests uppercase font-mono">
                     {over ? "Over" : "Left"}
                   </div>
-                  <div className={`text-[15px] font-bold font-mono mt-0.5 ${over ? "text-bf-accent2" : "text-bf-accent"}`}>
+                  <div
+                    className="text-[15px] font-bold font-mono mt-0.5"
+                    style={{ color: oc ?? "#7CC5A8" }}
+                  >
                     {fmt(Math.abs(rem))}
                   </div>
                 </div>
@@ -319,7 +339,7 @@ export default function DashboardPage() {
                 <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%`, background: over ? "#E8927C" : drillCat.color }}
+                    style={{ width: `${pct}%`, background: oc ?? drillCat.color }}
                   />
                 </div>
                 <div className="text-[10px] text-bf-dim font-mono mt-1">{pct.toFixed(0)}% used</div>
