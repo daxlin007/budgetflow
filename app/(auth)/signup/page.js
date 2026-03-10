@@ -10,6 +10,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -52,9 +53,14 @@ export default function SignupPage() {
       }
     }
 
-    // Redirect to login to verify email
-    console.log("Redirecting to login");
-    router.push("/login");
+    // Show success message
+    setSignupSuccess(true);
+    setLoading(false);
+
+    // Redirect to login after 3 seconds
+    setTimeout(() => {
+      router.push("/login");
+    }, 3000);
   };
 
   const handleGoogleSignup = async () => {
@@ -74,10 +80,23 @@ export default function SignupPage() {
           <h1 className="text-3xl font-bold tracking-tight">
             budget<span className="text-bf-accent">flow</span>
           </h1>
-          <p className="text-sm text-bf-dim mt-2">Create your account to get started.</p>
+          <p className="text-sm text-bf-dim mt-2">{signupSuccess ? "Check your email to verify" : "Create your account to get started."}</p>
         </div>
 
-        <form onSubmit={handleSignup} className="flex flex-col gap-3">
+        {signupSuccess ? (
+          <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-7 text-center">
+            <div className="text-5xl mb-4">✓</div>
+            <h2 className="text-xl font-semibold mb-2">Account Created!</h2>
+            <p className="text-sm text-bf-dim mb-4">
+              A verification email has been sent to<br />
+              <span className="font-mono text-bf-accent">{email}</span>
+            </p>
+            <p className="text-xs text-bf-dim">
+              Redirecting to login in a moment...
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSignup} className="flex flex-col gap-3">
             <div>
               <label className="text-[11px] text-bf-dim tracking-widest uppercase font-mono block mb-1">Full Name</label>
               <input value={name} onChange={e => setName(e.target.value)} placeholder="David"
@@ -130,6 +149,7 @@ export default function SignupPage() {
               </button>
             </div>
           </form>
+        )}
       </div>
     </div>
   );
