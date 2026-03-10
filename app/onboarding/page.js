@@ -249,122 +249,126 @@ export default function OnboardingPage() {
 
           {/* Step 2: Categories */}
           {step === 2 && (
-            <div>
+            <div className="flex flex-col h-[520px]">
               <h2 className="text-xl font-bold mb-1">Budget Categories</h2>
-              <p className="text-bf-dim text-sm mb-4">Select which categories to track and set your monthly budget for each.</p>
+              <p className="text-bf-dim text-sm mb-3">Select which categories to track and set your monthly budget for each.</p>
 
-              <div className="flex flex-col gap-2 mb-4 max-h-[280px] overflow-y-auto pr-1">
-                {/* Default Categories */}
-                {DEFAULT_CATEGORIES.map((cat) => (
-                  <div
-                    key={cat.slug}
-                    className={`rounded-xl p-3 border transition cursor-pointer ${selectedCats[cat.slug] ? "border-bf-accent/30 bg-bf-accent/[0.05]" : "border-white/[0.07] bg-white/[0.02] opacity-50"}`}
-                    onClick={() => toggleDefaultCategory(cat.slug)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-4 h-4 rounded flex items-center justify-center text-[9px] border ${selectedCats[cat.slug] ? "bg-bf-accent border-bf-accent text-bf-bg" : "border-white/[0.2]"}`}>
-                          {selectedCats[cat.slug] && "✓"}
-                        </div>
-                        <span className="text-base">{cat.emoji}</span>
-                        <span className="text-sm font-medium">{cat.name}</span>
-                      </div>
-                      {selectedCats[cat.slug] && (
-                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                          <span className="text-xs text-bf-dim font-mono">$</span>
-                          <input
-                            type="number"
-                            value={catBudgets[cat.slug]}
-                            onChange={(e) => setCatBudgets((p) => ({ ...p, [cat.slug]: e.target.value }))}
-                            className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-bf-accent/30"
-                            min="0"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Custom Categories */}
-                {customCats.map((cat, idx) => (
-                  <div
-                    key={`custom-${idx}`}
-                    className="rounded-xl p-3 border border-bf-accent/30 bg-bf-accent/[0.05] transition"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">{cat.emoji}</span>
-                        <span className="text-sm font-medium">{cat.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-bf-dim font-mono">$</span>
-                          <input
-                            type="number"
-                            value={cat.budget}
-                            onChange={(e) => setCustomCats(customCats.map((c, i) => i === idx ? { ...c, budget: parseFloat(e.target.value) || 0 } : c))}
-                            className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-bf-accent/30"
-                            min="0"
-                          />
-                        </div>
-                        <button
-                          onClick={() => removeCustomCategory(idx)}
-                          className="text-bf-dim hover:text-bf-accent2 transition text-lg leading-none"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Add Custom Category */}
-              <div className="bg-white/[0.02] border border-white/[0.07] rounded-xl p-3 mb-4">
-                <p className="text-xs text-bf-dim font-mono uppercase tracking-widest mb-2">Add Custom Category</p>
-                <div className="flex flex-col gap-2">
+              {/* Add Custom Category Form - Always Visible */}
+              <div className="bg-bf-accent/[0.08] border border-bf-accent/30 rounded-xl p-3 mb-3">
+                <p className="text-xs text-bf-dim font-mono uppercase tracking-widest mb-2">➕ Add Custom Category</p>
+                <input
+                  type="text"
+                  placeholder="Name (e.g., Insurance)"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm mb-2 outline-none focus:border-bf-accent/30 transition"
+                />
+                <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Category name"
-                    value={newCatName}
-                    onChange={(e) => setNewCatName(e.target.value)}
-                    className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm outline-none focus:border-bf-accent/30 transition"
+                    placeholder="🎯"
+                    value={newCatEmoji}
+                    onChange={(e) => setNewCatEmoji(e.target.value.slice(0, 2))}
+                    maxLength="2"
+                    className="w-12 bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-2 text-sm text-center outline-none focus:border-bf-accent/30 transition"
                   />
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Emoji"
-                      value={newCatEmoji}
-                      onChange={(e) => setNewCatEmoji(e.target.value.slice(0, 2))}
-                      className="w-12 bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-2 text-sm text-center outline-none focus:border-bf-accent/30 transition"
-                      maxLength="2"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Budget"
-                      value={newCatBudget}
-                      onChange={(e) => setNewCatBudget(e.target.value)}
-                      className="flex-1 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm outline-none focus:border-bf-accent/30 transition"
-                      min="0"
-                    />
-                    <button
-                      onClick={addCustomCategory}
-                      className="px-3 py-2 rounded-lg bg-bf-accent/20 text-bf-accent hover:bg-bf-accent/30 transition text-sm font-bold"
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={newCatBudget}
+                    onChange={(e) => setNewCatBudget(e.target.value)}
+                    min="0"
+                    className="flex-1 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm outline-none focus:border-bf-accent/30 transition"
+                  />
+                  <button
+                    onClick={addCustomCategory}
+                    className="px-4 py-2 rounded-lg bg-bf-accent text-bf-bg hover:opacity-90 transition text-sm font-bold"
+                  >
+                    Add
+                  </button>
+                </div>
+                {error && (
+                  <p className="text-xs text-bf-accent2 mt-2">{error}</p>
+                )}
+              </div>
+
+              {/* Scrollable Category List */}
+              <div className="flex-1 overflow-y-auto pr-1">
+                <div className="flex flex-col gap-2">
+                  {/* Custom Categories */}
+                  {customCats.length > 0 && (
+                    <>
+                      <p className="text-xs text-bf-dim font-mono uppercase tracking-widest sticky top-0 bg-white/[0.03] py-1 px-1">Your Categories ({customCats.length})</p>
+                      {customCats.map((cat, idx) => (
+                        <div
+                          key={`custom-${idx}`}
+                          className="rounded-xl p-3 border border-bf-accent/30 bg-bf-accent/[0.05]"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">{cat.emoji}</span>
+                              <span className="text-sm font-medium">{cat.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={cat.budget}
+                                onChange={(e) => setCustomCats(customCats.map((c, i) => i === idx ? { ...c, budget: parseFloat(e.target.value) || 0 } : c))}
+                                className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-bf-accent/30"
+                                min="0"
+                              />
+                              <button
+                                onClick={() => removeCustomCategory(idx)}
+                                className="text-bf-dim hover:text-bf-accent2 transition text-lg leading-none"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Default Categories */}
+                  <p className="text-xs text-bf-dim font-mono uppercase tracking-widest sticky top-0 bg-white/[0.03] py-1 px-1 mt-2">{customCats.length > 0 ? "Default Categories" : "Available Categories"}</p>
+                  {DEFAULT_CATEGORIES.map((cat) => (
+                    <div
+                      key={cat.slug}
+                      className={`rounded-xl p-3 border transition cursor-pointer ${selectedCats[cat.slug] ? "border-bf-accent/30 bg-bf-accent/[0.05]" : "border-white/[0.07] bg-white/[0.02] opacity-50"}`}
+                      onClick={() => toggleDefaultCategory(cat.slug)}
                     >
-                      Add
-                    </button>
-                  </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded flex items-center justify-center text-[9px] border ${selectedCats[cat.slug] ? "bg-bf-accent border-bf-accent text-bf-bg" : "border-white/[0.2]"}`}>
+                            {selectedCats[cat.slug] && "✓"}
+                          </div>
+                          <span className="text-base">{cat.emoji}</span>
+                          <span className="text-sm font-medium">{cat.name}</span>
+                        </div>
+                        {selectedCats[cat.slug] && (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <span className="text-xs text-bf-dim font-mono">$</span>
+                            <input
+                              type="number"
+                              value={catBudgets[cat.slug]}
+                              onChange={(e) => setCatBudgets((p) => ({ ...p, [cat.slug]: e.target.value }))}
+                              className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 text-xs font-mono text-right outline-none focus:border-bf-accent/30"
+                              min="0"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between py-2 border-t border-white/[0.07] mb-4">
+              {/* Total Budget and Buttons */}
+              <div className="flex items-center justify-between py-2 border-t border-white/[0.07] mt-3 mb-3">
                 <span className="text-xs text-bf-dim font-mono">Total Budget</span>
                 <span className="text-sm font-bold font-mono text-bf-accent">${totalBudget.toLocaleString("en-CA", { minimumFractionDigits: 0 })}/mo</span>
               </div>
-
-              {error && (
-                <div className="text-sm text-bf-accent2 px-3 py-2 bg-bf-accent2/[0.08] rounded-lg border border-bf-accent2/[0.15] mb-4">{error}</div>
-              )}
 
               <div className="flex gap-3">
                 <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl bg-white/[0.04] border border-white/[0.07] text-bf-dim text-sm cursor-pointer hover:bg-white/[0.07] transition">← Back</button>
