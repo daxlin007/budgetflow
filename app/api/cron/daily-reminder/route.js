@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "../../../lib/supabase-admin";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export const dynamic = "force-dynamic";
 
 export async function GET(request) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   // Verify this request is from Vercel Cron
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
