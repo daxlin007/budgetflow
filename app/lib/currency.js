@@ -13,6 +13,7 @@ const CURRENCIES = {
   MXN: { symbol: "$", name: "Mexican Peso" },
   BRL: { symbol: "R$", name: "Brazilian Real" },
   ZAR: { symbol: "R", name: "South African Rand" },
+  NGN: { symbol: "₦", name: "Nigerian Naira" },
 };
 
 export const getCurrencySymbol = (currency = "USD") => {
