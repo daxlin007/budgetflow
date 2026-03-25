@@ -25,15 +25,19 @@ export async function POST(request) {
     .map((c) => `"${c.slug}" (${c.name})`)
     .join(", ");
 
+  const currentDate = new Date().toISOString().split('T')[0];
+
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1000,
       system: `You are a budget assistant. Extract spending from natural language.
 
+Today's date: ${currentDate}
+
 Budget categories: ${catList}
 
-CURRENT BUDGET STATUS:
+CURRENT BUDGET STATUS (This Month + Year-to-Date):
 ${budgetContext || "No budget data yet."}
 
 RESPOND WITH ONLY JSON (no markdown, no backticks):
@@ -47,7 +51,7 @@ For MULTIPLE items in one message (e.g. "$40 groceries and $15 coffee"):
 For questions/chat/non-spending:
 {"type":"chat","message":"<response>"}
 
-When responding to chat, you know the user's budget status above. Give specific, helpful advice referencing their actual numbers.
+When responding to chat, you know the user's budget status above including year-to-date totals. Give specific, helpful advice referencing their actual numbers. Answer questions about total spending this year, monthly trends, and budget performance.
 
 Rules:
 - Match BEST category by slug. "fuel my Hyundai" → gas. "coffee" → dining. "Netflix" → subscriptions.

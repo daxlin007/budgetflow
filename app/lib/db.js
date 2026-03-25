@@ -73,7 +73,7 @@ export async function insertCategories(categories) {
     .select();
 
   if (error) throw error;
-  return data;
+  return (data || []).filter(c => c && c.id);
 }
 
 export async function deleteCategory(id) {
@@ -97,7 +97,7 @@ export async function getTransactions(monthKey) {
 
   const { data, error } = await query;
   if (error) throw error;
-  return data;
+  return (data || []).filter(t => t && t.id);
 }
 
 export async function getAllTransactions() {
@@ -107,7 +107,7 @@ export async function getAllTransactions() {
     .order("date", { ascending: false });
 
   if (error) throw error;
-  return data;
+  return (data || []).filter(t => t && t.id);
 }
 
 export async function insertTransaction(tx) {
@@ -147,7 +147,7 @@ export async function getRecurring() {
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  return data;
+  return (data || []).filter(r => r && r.id);
 }
 
 export async function insertRecurring(rec) {
@@ -159,6 +159,7 @@ export async function insertRecurring(rec) {
     .single();
 
   if (error) throw error;
+  if (!data || !data.id) throw new Error("Failed to create recurring expense");
   return data;
 }
 
@@ -172,7 +173,7 @@ export async function insertRecurringBatch(recs) {
     .select("*, categories(name, emoji, color)");
 
   if (error) throw error;
-  return data;
+  return (data || []).filter(r => r && r.id);
 }
 
 export async function deleteRecurring(id) {
@@ -248,6 +249,90 @@ export async function getMonthlySummaries(months) {
   }
 
   return summaries;
+}
+
+// ─── CHAT SESSIONS ──────────────────────────────────────────────────────────
+export async function getChatSessions() {
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (error) throw error;
+  return (data || []).filter(s => s && s.id);
+}
+
+export async function createChatSession(title = "Chat") {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .insert({ title, user_id: user.id })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateChatSession(sessionId, updates) {
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", sessionId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteChatSession(sessionId) {
+  const { error } = await supabase
+    .from("chat_sessions")
+    .delete()
+    .eq("id", sessionId);
+
+  if (error) throw error;
+}
+
+// ─── CHAT MESSAGES ──────────────────────────────────────────────────────────
+export async function getChatMessages(sessionId) {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data || []).filter(m => m && m.id);
+}
+
+export async function saveChatMessage(sessionId, message) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .insert({
+      session_id: sessionId,
+      user_id: user.id,
+      role: message.role,
+      type: message.type,
+      text: message.text,
+      items: message.items || null
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteChatMessages(sessionId) {
+  const { error } = await supabase
+    .from("chat_messages")
+    .delete()
+    .eq("session_id", sessionId);
+
+  if (error) throw error;
 }
 
 // ─── EXPORT ─────────────────────────────────────────────────────────────────

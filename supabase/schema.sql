@@ -12,6 +12,7 @@ CREATE TABLE public.profiles (
   name TEXT NOT NULL,
   monthly_income NUMERIC(12,2) DEFAULT 5500.00,
   onboarded BOOLEAN DEFAULT false,
+  currency TEXT DEFAULT 'USD' NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

@@ -32,9 +32,14 @@ export async function middleware(request) {
   // Redirect unauthenticated users to login
   const isAuthPage =
     request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup");
+    request.nextUrl.pathname.startsWith("/signup") ||
+    request.nextUrl.pathname.startsWith("/forgot-password") ||
+    request.nextUrl.pathname.startsWith("/reset-password") ||
+    request.nextUrl.pathname.startsWith("/verify-email");
 
-  if (!user && !isAuthPage) {
+  const isOnboarding = request.nextUrl.pathname.startsWith("/onboarding");
+
+  if (!user && !isAuthPage && !isOnboarding) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
@@ -43,8 +48,31 @@ export async function middleware(request) {
   // Redirect authenticated users away from auth pages
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+
+    // Check profile onboarded status
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarded")
+      .eq("id", user.id)
+      .single();
+
+    url.pathname = profile?.onboarded ? "/dashboard" : "/onboarding";
     return NextResponse.redirect(url);
+  }
+
+  // Redirect fully onboarded users away from onboarding page
+  if (user && isOnboarding) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarded")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.onboarded) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

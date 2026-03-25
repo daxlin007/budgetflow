@@ -26,8 +26,47 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    // Check if user has completed onboarding
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("Logged in user:", user?.id);
+
+      if (!user) {
+        setError("Failed to get user");
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("onboarded")
+        .eq("id", user.id)
+        .single();
+
+      console.log("Profile query result:", { profile, profileError });
+
+      // If profile doesn't exist, redirect to onboarding (they'll create it there)
+      // If profile exists and not onboarded, go to onboarding
+      // If profile exists and onboarded, go to dashboard
+      if (!profile || !profile?.onboarded) {
+        console.log("Redirecting to /onboarding");
+        router.push("/onboarding");
+      } else {
+        console.log("Redirecting to /dashboard");
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/onboarding` },
+    });
   };
 
   return (
@@ -52,7 +91,12 @@ export default function LoginPage() {
               className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-bf-text outline-none focus:border-bf-accent/30 transition" />
           </div>
           <div>
-            <label className="text-[11px] text-bf-dim tracking-widest uppercase font-mono block mb-1">Password</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-[11px] text-bf-dim tracking-widest uppercase font-mono">Password</label>
+              <button type="button" onClick={() => router.push("/forgot-password")} className="text-[11px] text-bf-accent bg-transparent border-none cursor-pointer hover:underline">
+                Forgot password?
+              </button>
+            </div>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
               className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-bf-text outline-none focus:border-bf-accent/30 transition" />
           </div>
@@ -64,6 +108,26 @@ export default function LoginPage() {
           <button type="submit" disabled={loading}
             className="w-full py-3.5 rounded-xl bg-gradient-to-br from-bf-accent to-emerald-600 text-bf-bg text-[15px] font-bold cursor-pointer disabled:opacity-50 mt-1 transition hover:opacity-90">
             {loading ? "Signing in..." : "Sign In"}
+          </button>
+
+          <div className="flex items-center gap-3 my-1">
+            <div className="flex-1 h-px bg-white/[0.07]" />
+            <span className="text-[11px] text-bf-dim font-mono">or</span>
+            <div className="flex-1 h-px bg-white/[0.07]" />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            className="w-full py-3 rounded-xl bg-white/[0.04] border border-white/[0.07] text-bf-text text-[14px] font-medium cursor-pointer hover:bg-white/[0.07] transition flex items-center justify-center gap-2.5"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+              <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.96L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
           </button>
         </form>
 
