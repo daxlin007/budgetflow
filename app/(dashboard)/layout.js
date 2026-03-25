@@ -16,13 +16,13 @@ export default function DashboardLayout({ children }) {
   const [profile, setProfile] = useState(null);
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
 
   useEffect(() => {
     getProfile().then(setProfile).catch(console.error);
   }, []);
 
   const handleLogout = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();

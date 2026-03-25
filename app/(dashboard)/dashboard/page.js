@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getCategories, getAllTransactions, getProfile } from "../../lib/db";
+import { getCategories, getAllTransactions, getProfile, insertCategories, updateProfile } from "../../lib/db";
 
 const fmt = (n) => `$${Math.abs(n).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtShort = (n) => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(0)}`);
@@ -17,13 +17,42 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState(null);
   const [selMonth, setSelMonth] = useState(nowKey());
   const [loading, setLoading] = useState(true);
+  const [onboardingIncome, setOnboardingIncome] = useState("5500");
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([getCategories(), getAllTransactions(), getProfile()])
-      .then(([c, t, p]) => { setCats(c || []); setTxs(t || []); setProfile(p); setLoading(false); })
+      .then(([c, t, p]) => { setCats(c || []); setTxs(t || []); setProfile(p); setOnboardingOpen(Boolean(p && !p.onboarded)); setOnboardingIncome(String(p?.monthly_income || 5500)); setLoading(false); })
       .catch((e) => { console.error(e); setLoading(false); });
   }, []);
 
+
+  const completeOnboarding = async () => {
+    try {
+      const starter = [
+        { id: "housing", name: "Housing", emoji: "🏠", budget: 1800, color: "#7CC5A8" },
+        { id: "groceries", name: "Groceries", emoji: "🛒", budget: 550, color: "#6DB7FF" },
+        { id: "dining", name: "Dining", emoji: "🍽️", budget: 280, color: "#E8C07C" },
+        { id: "gas", name: "Gas", emoji: "⛽", budget: 220, color: "#E8927C" },
+        { id: "subscriptions", name: "Subscriptions", emoji: "📺", budget: 120, color: "#A98BE0" },
+      ];
+
+      if (!cats.length) {
+        await insertCategories(starter);
+        setCats(await getCategories());
+      }
+
+      const updated = await updateProfile({
+        monthly_income: Number(onboardingIncome || 0),
+        onboarded: true,
+      });
+
+      setProfile(updated);
+      setOnboardingOpen(false);
+    } catch (error) {
+      console.error(error);
+    }
+  };
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -231,6 +260,34 @@ export default function DashboardPage() {
           })
         )}
       </div>
+      {onboardingOpen && (
+        <div className="fixed inset-0 bg-black/65 z-50 flex items-center justify-center px-4">
+          <div className="w-full max-w-[520px] bg-[#111513] border border-white/[0.12] rounded-2xl p-5">
+            <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono">Welcome</div>
+            <h2 className="text-xl font-bold mt-1">Set up your budget in 30 seconds</h2>
+            <p className="text-sm text-bf-dim mt-1">We'll set starter categories and your monthly income.</p>
+
+            <label className="block text-xs text-bf-dim mt-4 mb-1">Monthly Income</label>
+            <input
+              type="number"
+              step="0.01"
+              value={onboardingIncome}
+              onChange={(e) => setOnboardingIncome(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2.5 text-sm"
+            />
+
+            <div className="text-xs text-bf-dim mt-3">Starter categories: Housing, Groceries, Dining, Gas, Subscriptions.</div>
+
+            <button
+              onClick={completeOnboarding}
+              className="mt-4 w-full py-2.5 rounded-xl bg-gradient-to-br from-bf-accent to-emerald-600 text-bf-bg text-sm font-bold"
+            >
+              Complete Setup
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

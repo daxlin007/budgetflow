@@ -2,9 +2,93 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "../../lib/supabase-server";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+function normalizeSlug(s = "") {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+
+
+const CATEGORY_KEYWORDS = {
+  groceries: ["grocery", "groceries", "supermarket", "food", "produce", "milk", "bread", "coffee"],
+  dining: ["dining", "restaurant", "lunch", "dinner", "cafe", "coffee", "takeout", "uber eats"],
+  gas: ["gas", "fuel", "petrol", "tank", "diesel", "station"],
+  transport: ["bus", "train", "metro", "transit", "uber", "taxi", "lyft"],
+  housing: ["rent", "mortgage", "housing", "landlord", "hoa"],
+  utilities: ["hydro", "electric", "electricity", "water", "internet", "wifi", "utility"],
+  subscriptions: ["subscription", "netflix", "spotify", "prime", "apple", "youtube"],
+};
+
+function keywordScore(text, category) {
+  const haystack = normalizeSlug(text);
+  const slug = normalizeSlug(category.slug || "");
+  const name = normalizeSlug(category.name || "");
+  let score = 0;
+
+  if (haystack.includes(slug)) score += 5;
+  if (haystack.includes(name)) score += 4;
+
+  const keys = [
+    ...(CATEGORY_KEYWORDS[slug] || []),
+    ...(CATEGORY_KEYWORDS[name] || []),
+  ];
+
+  keys.forEach((k) => {
+    if (haystack.includes(normalizeSlug(k))) score += 3;
+  });
+
+  return score;
+}
+
+function pickBestCategory(text, categories = []) {
+  if (!categories.length) return null;
+  const ranked = categories
+    .map((c) => ({ c, score: keywordScore(text, c) }))
+    .sort((a, b) => b.score - a.score);
+
+  return ranked[0].score > 0 ? ranked[0].c : categories[0];
+}
+
+function fallbackParse(message, categories) {
+  const msg = String(message || "").trim();
+  const lowered = msg.toLowerCase();
+  const amountMatches = [...lowered.matchAll(/\$?\s*(\d+(?:\.\d{1,2})?)/g)];
+
+  if (!amountMatches.length) {
+    return {
+      type: "chat",
+      message: "I couldn't find an amount. Try: \"Spent $45 on groceries\".",
+    };
+  }
+
+  const normalizedCats = categories || [];
+
+  const items = amountMatches.map((m) => {
+    const amount = Number(m[1]);
+    const slice = lowered.slice(Math.max(0, m.index - 18), Math.min(lowered.length, m.index + 32));
+    const cat = pickBestCategory(`${msg} ${slice}`, normalizedCats);
+    return {
+      amount,
+      category_slug: cat?.slug || normalizedCats[0]?.slug || "other",
+      description: cat?.name || "Expense",
+    };
+  });
+
+  return { type: "transaction", items };
+}
+
+function parseJsonFromModelText(text) {
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first !== -1 && last !== -1 && first < last) {
+      return JSON.parse(cleaned.slice(first, last + 1));
+    }
+    throw new Error("Model response was not valid JSON");
+  }
+}
 
 export async function POST(request) {
   // Verify user is authenticated
@@ -26,8 +110,20 @@ export async function POST(request) {
     .join(", ");
 
   try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({
+        ...fallbackParse(message, categories),
+        parser: "fallback",
+        parserReason: "missing_api_key",
+      });
+    }
+
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest",
       max_tokens: 1000,
       system: `You are a budget assistant. Extract spending from natural language.
 
@@ -61,18 +157,15 @@ Rules:
       .map((block) => (block.type === "text" ? block.text : ""))
       .join("");
 
-    const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+    const parsed = parseJsonFromModelText(text);
 
-    return NextResponse.json(parsed);
+    return NextResponse.json({ ...parsed, parser: "claude", parserReason: null });
   } catch (error) {
     console.error("Claude API error:", error);
-    return NextResponse.json(
-      {
-        type: "chat",
-        message:
-          "Sorry, I had trouble understanding that. Try: \"Spent $45 on groceries\" or \"$60 gas and $30 coffee\"",
-      },
-      { status: 200 } // Return 200 so client handles gracefully
-    );
+    return NextResponse.json({
+      ...fallbackParse(message, categories),
+      parser: "fallback",
+      parserReason: "anthropic_error",
+    }, { status: 200 });
   }
 }

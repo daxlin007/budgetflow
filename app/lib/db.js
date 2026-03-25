@@ -1,13 +1,21 @@
 import { createClient } from "./supabase-browser";
 
-const supabase = createClient();
+let supabase = null;
+
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient();
+  }
+
+  return supabase;
+}
 
 // ─── PROFILE ────────────────────────────────────────────────────────────────
 export async function getProfile() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getSupabase().auth.getUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("profiles")
     .select("*")
     .eq("id", user.id)
@@ -18,10 +26,10 @@ export async function getProfile() {
 }
 
 export async function updateProfile(updates) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getSupabase().auth.getUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("profiles")
     .update(updates)
     .eq("id", user.id)
@@ -34,7 +42,7 @@ export async function updateProfile(updates) {
 
 // ─── CATEGORIES ─────────────────────────────────────────────────────────────
 export async function getCategories() {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("categories")
     .select("*")
     .order("sort_order", { ascending: true });
@@ -44,8 +52,8 @@ export async function getCategories() {
 }
 
 export async function upsertCategory(category) {
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data, error } = await supabase
+  const { data: { user } } = await getSupabase().auth.getUser();
+  const { data, error } = await getSupabase()
     .from("categories")
     .upsert({ ...category, user_id: user.id })
     .select()
@@ -56,7 +64,7 @@ export async function upsertCategory(category) {
 }
 
 export async function insertCategories(categories) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getSupabase().auth.getUser();
   const rows = categories.map((c, i) => ({
     user_id: user.id,
     slug: c.slug || c.id,
@@ -67,7 +75,7 @@ export async function insertCategories(categories) {
     sort_order: i,
   }));
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("categories")
     .insert(rows)
     .select();
@@ -77,13 +85,13 @@ export async function insertCategories(categories) {
 }
 
 export async function deleteCategory(id) {
-  const { error } = await supabase.from("categories").delete().eq("id", id);
+  const { error } = await getSupabase().from("categories").delete().eq("id", id);
   if (error) throw error;
 }
 
 // ─── TRANSACTIONS ───────────────────────────────────────────────────────────
 export async function getTransactions(monthKey) {
-  let query = supabase
+  let query = getSupabase()
     .from("transactions")
     .select("*, categories(name, emoji, color)")
     .order("date", { ascending: false });
@@ -101,7 +109,7 @@ export async function getTransactions(monthKey) {
 }
 
 export async function getAllTransactions() {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("transactions")
     .select("*, categories(name, emoji, color)")
     .order("date", { ascending: false });
@@ -111,8 +119,8 @@ export async function getAllTransactions() {
 }
 
 export async function insertTransaction(tx) {
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data, error } = await supabase
+  const { data: { user } } = await getSupabase().auth.getUser();
+  const { data, error } = await getSupabase()
     .from("transactions")
     .insert({ ...tx, user_id: user.id })
     .select("*, categories(name, emoji, color)")
@@ -123,7 +131,7 @@ export async function insertTransaction(tx) {
 }
 
 export async function updateTransaction(id, updates) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("transactions")
     .update(updates)
     .eq("id", id)
@@ -135,13 +143,13 @@ export async function updateTransaction(id, updates) {
 }
 
 export async function deleteTransaction(id) {
-  const { error } = await supabase.from("transactions").delete().eq("id", id);
+  const { error } = await getSupabase().from("transactions").delete().eq("id", id);
   if (error) throw error;
 }
 
 // ─── RECURRING EXPENSES ─────────────────────────────────────────────────────
 export async function getRecurring() {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("recurring_expenses")
     .select("*, categories(name, emoji, color)")
     .order("created_at", { ascending: true });
@@ -151,8 +159,8 @@ export async function getRecurring() {
 }
 
 export async function insertRecurring(rec) {
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data, error } = await supabase
+  const { data: { user } } = await getSupabase().auth.getUser();
+  const { data, error } = await getSupabase()
     .from("recurring_expenses")
     .insert({ ...rec, user_id: user.id })
     .select("*, categories(name, emoji, color)")
@@ -163,10 +171,10 @@ export async function insertRecurring(rec) {
 }
 
 export async function insertRecurringBatch(recs) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getSupabase().auth.getUser();
   const rows = recs.map(r => ({ ...r, user_id: user.id }));
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("recurring_expenses")
     .insert(rows)
     .select("*, categories(name, emoji, color)");
@@ -176,16 +184,16 @@ export async function insertRecurringBatch(recs) {
 }
 
 export async function deleteRecurring(id) {
-  const { error } = await supabase.from("recurring_expenses").delete().eq("id", id);
+  const { error } = await getSupabase().from("recurring_expenses").delete().eq("id", id);
   if (error) throw error;
 }
 
 // ─── POPULATE RECURRING FOR MONTH ───────────────────────────────────────────
 export async function populateRecurringForMonth(monthKey) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getSupabase().auth.getUser();
 
   // Get recurring expenses
-  const { data: recurring } = await supabase
+  const { data: recurring } = await getSupabase()
     .from("recurring_expenses")
     .select("*")
     .eq("user_id", user.id);
@@ -197,7 +205,7 @@ export async function populateRecurringForMonth(monthKey) {
   const [y, m] = monthKey.split("-").map(Number);
   const endDate = new Date(y, m, 0).toISOString().slice(0, 10);
 
-  const { data: existing } = await supabase
+  const { data: existing } = await getSupabase()
     .from("transactions")
     .select("recurring_id")
     .eq("user_id", user.id)
@@ -222,14 +230,14 @@ export async function populateRecurringForMonth(monthKey) {
 
   if (toInsert.length === 0) return 0;
 
-  const { error } = await supabase.from("transactions").insert(toInsert);
+  const { error } = await getSupabase().from("transactions").insert(toInsert);
   if (error) throw error;
   return toInsert.length;
 }
 
 // ─── MONTHLY SUMMARY (for dashboard trend chart) ────────────────────────────
 export async function getMonthlySummaries(months) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getSupabase().auth.getUser();
   const summaries = {};
 
   for (const mk of months) {
@@ -237,7 +245,7 @@ export async function getMonthlySummaries(months) {
     const startDate = `${mk}-01`;
     const endDate = new Date(y, m, 0).toISOString().slice(0, 10);
 
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from("transactions")
       .select("amount")
       .eq("user_id", user.id)
@@ -251,4 +259,4 @@ export async function getMonthlySummaries(months) {
 }
 
 // ─── EXPORT ─────────────────────────────────────────────────────────────────
-export { supabase };
+export { getSupabase as supabase };

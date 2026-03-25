@@ -10,16 +10,18 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState("");
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
+    setNotice("");
     if (!name || !email || !password) { setError("Please fill in all fields."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true);
 
+    const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -32,7 +34,12 @@ export default function SignupPage() {
       return;
     }
 
-    // After signup, go to onboarding
+    if (!data.session) {
+      setNotice("Account created. Check your email to confirm your account, then sign in.");
+      setLoading(false);
+      return;
+    }
+
     router.push("/dashboard");
     router.refresh();
   };
@@ -69,6 +76,9 @@ export default function SignupPage() {
 
           {error && (
             <div className="text-sm text-bf-accent2 px-3 py-2 bg-bf-accent2/[0.08] rounded-lg border border-bf-accent2/[0.15]">{error}</div>
+          )}
+          {notice && (
+            <div className="text-sm text-bf-accent px-3 py-2 bg-bf-accent/[0.1] rounded-lg border border-bf-accent/[0.2]">{notice}</div>
           )}
 
           <button type="submit" disabled={loading}
