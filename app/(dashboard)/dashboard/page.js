@@ -6,6 +6,18 @@ import { getCategories, getAllTransactions, getProfile } from "../../lib/db";
 const fmt = (n) => `$${Math.abs(n).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtShort = (n) => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(0)}`);
 const nowKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+
+// Returns a color for over-budget states:
+//   0–24 % over  →  orange  (#E8927C)
+//  25–49 % over  →  red     (#D64545)
+//  50 %+  over  →  deep red (#B91C1C)
+const overColor = (spent, budget) => {
+  if (!budget || spent <= budget) return null;
+  const ratio = (spent - budget) / budget;
+  if (ratio >= 0.5) return "#B91C1C";
+  if (ratio >= 0.25) return "#D64545";
+  return "#E8927C";
+};
 const mkLabel = (k) => { const [y, m] = k.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-CA", { month: "long", year: "numeric" }); };
 const mkShort = (k) => { const [y, m] = k.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-CA", { month: "short" }); };
 const shiftMk = (k, d) => { const [y, m] = k.split("-").map(Number); const dt = new Date(y, m - 1 + d, 1); return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`; };
@@ -17,6 +29,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState(null);
   const [selMonth, setSelMonth] = useState(nowKey());
   const [loading, setLoading] = useState(true);
+  const [drillCat, setDrillCat] = useState(null); // category drill-down
 
   useEffect(() => {
     Promise.all([getCategories(), getAllTransactions(), getProfile()])
@@ -184,29 +197,59 @@ export default function DashboardPage() {
 
       {/* Categories */}
       <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5 mb-4">
-        <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono mb-3">By Category</div>
-        <div className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-[11px] text-bf-dim tracking-widest uppercase font-mono">By Category</div>
+          <div className="text-[10px] text-bf-dim">click to see expenses →</div>
+        </div>
+        <div className="flex flex-col gap-3">
           {sorted.map((cat) => {
-            const pct = parseFloat(cat.budget) > 0 ? (cat.spent / parseFloat(cat.budget)) * 100 : 0;
-            const over = cat.spent > parseFloat(cat.budget);
+            const budget = parseFloat(cat.budget) || 0;
+            const pct = budget > 0 ? Math.min((cat.spent / budget) * 100, 100) : 0;
+            const remaining = budget - cat.spent;
+            const over = remaining < 0;
+            const exact = remaining === 0 && budget > 0;
+            const oc = overColor(cat.spent, budget); // null when not over
             return (
-              <div key={cat.id}>
-                <div className="flex justify-between items-center mb-1">
+              <div
+                key={cat.id}
+                onClick={() => setDrillCat(cat)}
+                className="cursor-pointer rounded-xl px-3 py-2.5 -mx-3 hover:bg-white/[0.03] transition group"
+              >
+                <div className="flex justify-between items-center mb-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-[15px]">{cat.emoji}</span>
-                    <span className="text-[13px] font-medium">{cat.name}</span>
+                    <span className="text-[13px] font-medium group-hover:text-bf-accent transition">{cat.name}</span>
                   </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className={`text-[13px] font-semibold font-mono ${over ? "text-bf-accent2" : cat.spent > 0 ? "" : "text-bf-dim"}`}>{fmt(cat.spent)}</span>
-                    <span className="text-[10px] text-bf-dim font-mono">/ {fmtShort(parseFloat(cat.budget))}</span>
+                  <div className="text-right">
+                    <div
+                      className="text-[13px] font-bold font-mono leading-none"
+                      style={{ color: oc ?? (exact ? "#C5B87C" : cat.spent > 0 ? "#7CC5A8" : "rgba(232,230,225,0.38)") }}
+                    >
+                      {over
+                        ? `${fmt(Math.abs(remaining))} over`
+                        : exact
+                        ? "budget hit"
+                        : cat.spent > 0
+                        ? `${fmt(remaining)} left`
+                        : fmt(budget)}
+                    </div>
+                    <div className="text-[10px] text-bf-dim font-mono mt-0.5">
+                      {fmt(cat.spent)} <span className="opacity-50">/</span> {fmt(budget)}
+                    </div>
                   </div>
                 </div>
-                <div className="h-1 rounded-sm bg-white/[0.05] overflow-hidden">
-                  <div className="h-full rounded-sm transition-all duration-600" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "#E8927C" : cat.color }} />
+                <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, background: oc ?? (exact ? "#C5B87C" : cat.color) }}
+                  />
                 </div>
               </div>
             );
           })}
+          {sorted.length === 0 && (
+            <div className="text-center py-4 text-bf-dim text-sm">No categories yet — visit Setup to add them.</div>
+          )}
         </div>
       </div>
 
@@ -231,6 +274,109 @@ export default function DashboardPage() {
           })
         )}
       </div>
+
+      {/* ── Category Drill-Down Modal ─────────────────────────────────────── */}
+      {drillCat && (() => {
+        const budget = parseFloat(drillCat.budget) || 0;
+        const spent  = sCatSpend[drillCat.id] || 0;
+        const rem    = budget - spent;
+        const over   = rem < 0;
+        const pct    = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+        const oc     = overColor(spent, budget);
+        const catTxs = sTxs
+          .filter((t) => t.category_id === drillCat.id)
+          .sort((a, b) => b.date.localeCompare(a.date));
+
+        return (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 px-0 sm:px-4"
+            onClick={() => setDrillCat(null)}
+          >
+            <div
+              className="bg-bf-surface border border-white/[0.1] rounded-t-2xl sm:rounded-2xl w-full sm:max-w-[480px] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-white/[0.07]">
+                <span className="text-2xl">{drillCat.emoji}</span>
+                <div className="flex-1">
+                  <div className="text-[15px] font-bold">{drillCat.name}</div>
+                  <div className="text-[11px] text-bf-dim mt-0.5">{mkLabel(selMonth)}</div>
+                </div>
+                <button
+                  onClick={() => setDrillCat(null)}
+                  className="text-bf-dim hover:text-bf-text transition text-lg px-1 cursor-pointer bg-transparent border-none"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Stats strip */}
+              <div className="grid grid-cols-3 divide-x divide-white/[0.06] px-5 py-3">
+                <div className="pr-4">
+                  <div className="text-[10px] text-bf-dim tracking-widest uppercase font-mono">Spent</div>
+                  <div className="text-[15px] font-bold font-mono mt-0.5">{fmt(spent)}</div>
+                </div>
+                <div className="px-4">
+                  <div className="text-[10px] text-bf-dim tracking-widest uppercase font-mono">Budget</div>
+                  <div className="text-[15px] font-bold font-mono mt-0.5">{fmt(budget)}</div>
+                </div>
+                <div className="pl-4">
+                  <div className="text-[10px] text-bf-dim tracking-widests uppercase font-mono">
+                    {over ? "Over" : "Left"}
+                  </div>
+                  <div
+                    className="text-[15px] font-bold font-mono mt-0.5"
+                    style={{ color: oc ?? "#7CC5A8" }}
+                  >
+                    {fmt(Math.abs(rem))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div className="px-5 pb-3">
+                <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, background: oc ?? drillCat.color }}
+                  />
+                </div>
+                <div className="text-[10px] text-bf-dim font-mono mt-1">{pct.toFixed(0)}% used</div>
+              </div>
+
+              {/* Transaction list */}
+              <div className="border-t border-white/[0.07] overflow-y-auto" style={{ maxHeight: 320 }}>
+                {catTxs.length === 0 ? (
+                  <div className="text-center py-8 text-bf-dim text-sm">
+                    No transactions in {drillCat.name} this month.
+                  </div>
+                ) : (
+                  catTxs.map((tx, i) => (
+                    <div
+                      key={tx.id}
+                      className={`flex items-center px-5 py-3 ${i < catTxs.length - 1 ? "border-b border-white/[0.04]" : ""}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-medium truncate">
+                          {tx.description}
+                          {tx.is_recurring && (
+                            <span className="text-[9px] text-bf-accent ml-1.5 font-mono">↻</span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-bf-dim">{tx.date}</div>
+                      </div>
+                      <span className="text-[13px] font-semibold font-mono text-bf-accent2 shrink-0">
+                        -{fmt(parseFloat(tx.amount))}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
