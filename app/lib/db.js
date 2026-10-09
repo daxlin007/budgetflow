@@ -199,17 +199,24 @@ export async function populateRecurringForMonth(monthKey) {
 
   const { data: existing } = await supabase
     .from("transactions")
-    .select("recurring_id")
+    .select("recurring_id, category_id, amount")
     .eq("user_id", user.id)
-    .eq("is_recurring", true)
     .gte("date", startDate)
     .lte("date", endDate);
 
   const existingIds = new Set((existing || []).map(t => t.recurring_id));
 
+  // A bill counts as paid if a previous populate inserted it (recurring_id
+  // match) OR if it was logged manually this month for the same category
+  // and amount (e.g. marked "fully spent" by hand before tapping the button).
+  const paidKeys = new Set(
+    (existing || []).map(t => `${t.category_id}|${parseFloat(t.amount).toFixed(2)}`)
+  );
+  const billKey = (r) => `${r.category_id}|${parseFloat(r.amount).toFixed(2)}`;
+
   // Insert missing ones
   const toInsert = recurring
-    .filter(r => !existingIds.has(r.id))
+    .filter(r => !existingIds.has(r.id) && !paidKeys.has(billKey(r)))
     .map(r => ({
       user_id: user.id,
       category_id: r.category_id,

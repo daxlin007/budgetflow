@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   getProfile,
   updateProfile,
@@ -56,6 +56,7 @@ export default function SetupPage() {
 
   const [populating, setPopulating] = useState(false);
   const [popMsg, setPopMsg] = useState("");
+  const popRef = useRef(false);
 
   useEffect(() => {
     Promise.all([getProfile(), getCategories(), getRecurring()])
@@ -164,6 +165,8 @@ export default function SetupPage() {
   }
 
   async function populateMonth() {
+    if (popRef.current) return; // guard against rapid double-taps
+    popRef.current = true;
     setPopulating(true);
     setPopMsg("");
     try {
@@ -174,6 +177,7 @@ export default function SetupPage() {
       setPopMsg("Couldn't populate — try again.");
     } finally {
       setPopulating(false);
+      popRef.current = false;
     }
   }
 
