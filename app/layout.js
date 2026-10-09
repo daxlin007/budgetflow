@@ -1,8 +1,19 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "BudgetFlow — AI-Powered Household Budget Tracker",
-  description: "Chat your spending. AI categorizes it automatically.",
+  title: "Beldav — Household Budget Tracker",
+  description: "Chat your spending. It gets categorized automatically.",
+  themeColor: "#0C0E13",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Beldav",
+  },
 };
 
 export default function RootLayout({ children }) {
