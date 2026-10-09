@@ -1,12 +1,12 @@
-# BudgetFlow — AI-Powered Household Budget Tracker
+# BudgetFlow — Household Budget Tracker
 
-Chat your spending. AI categorizes it automatically.
+Chat your spending. It gets categorized automatically — no AI subscription needed.
 
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
 - **Database + Auth**: Supabase (Postgres + Row Level Security)
-- **AI**: Claude Sonnet via Anthropic API (server-side)
+- **Parsing**: Local rule-based spending parser (server-side, $0 cost)
 - **Styling**: Tailwind CSS
 - **Hosting**: Vercel (free tier)
 
@@ -44,10 +44,6 @@ npm install
 1. Dashboard → **Settings** → **API**
 2. Copy `Project URL` and `anon/public` key
 
-**Anthropic:**
-1. Go to [console.anthropic.com](https://console.anthropic.com)
-2. Create an API key
-
 ### 6. Set Environment Variables
 
 ```bash
@@ -58,7 +54,6 @@ Edit `.env.local`:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
-ANTHROPIC_API_KEY=sk-ant-api...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
@@ -91,7 +86,6 @@ git push -u origin main
 3. Add environment variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `ANTHROPIC_API_KEY`
    - `NEXT_PUBLIC_APP_URL` (set to your Vercel domain)
 4. Click **Deploy**
 
@@ -122,7 +116,7 @@ budgetflow/
 │   │   │   ├── signup/route.js
 │   │   │   ├── login/route.js
 │   │   │   └── logout/route.js
-│   │   └── parse-spending/route.js  # Claude API (server-side)
+│   │   └── parse-spending/route.js  # Local rule-based parser (server-side, no API)
 │   ├── lib/
 │   │   ├── supabase-server.js    # Server-side Supabase client
 │   │   ├── supabase-browser.js   # Client-side Supabase client
@@ -156,18 +150,18 @@ All tables have Row Level Security — users can only access their own data.
 |---------|-------------|
 | Vercel (Hobby) | $0 |
 | Supabase (Free) | $0 |
-| Anthropic API | ~$0.01-0.05/user/month |
-| **Total (solo use)** | **~$0-1/month** |
+| Spending parser | $0 (local, no API) |
+| **Total (solo use)** | **$0/month** |
 
-## Next Steps to Complete
+## Status
 
-The dashboard page is fully built. The remaining pages (Budget/Chat, History, Setup)
-need their UI components ported from the prototype. The architecture is ready —
-they just need to call the functions in `lib/db.js` instead of `window.storage`.
+All pages are built: Dashboard, Budget (chat + confirm-before-save), History
+(month filter, edit/delete, CSV export), and Setup (income, categories,
+recurring bills). The spending parser is local and rule-based — no AI API key
+needed.
 
-Key remaining work:
-- [ ] Port the chat interface to Budget page (use `/api/parse-spending`)
-- [ ] Port history view with month filter + edit/delete
-- [ ] Port setup page (categories, recurring, income)
-- [ ] Build onboarding wizard as a page/modal for new users
-- [ ] Add email verification flow (optional)
+Ideas for later:
+- [ ] Receipt photo → transaction (would need a vision API)
+- [ ] Monthly budget rollover
+- [ ] PWA / installable mobile app
+- [ ] Onboarding wizard for new users
