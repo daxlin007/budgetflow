@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState(null);
   const [selMonth, setSelMonth] = useState(nowKey());
   const [loading, setLoading] = useState(true);
+  const [drillCat, setDrillCat] = useState(null);
 
   useEffect(() => {
     Promise.all([getCategories(), getAllTransactions(), getProfile()])
@@ -190,7 +191,12 @@ export default function DashboardPage() {
             const pct = parseFloat(cat.budget) > 0 ? (cat.spent / parseFloat(cat.budget)) * 100 : 0;
             const over = cat.spent > parseFloat(cat.budget);
             return (
-              <div key={cat.id}>
+              <div
+                key={cat.id}
+                onClick={() => cat.spent > 0 && setDrillCat(cat)}
+                className={cat.spent > 0 ? "cursor-pointer rounded-lg px-2 -mx-2 py-1 hover:bg-white/[0.03] transition" : "px-2 -mx-2 py-1"}
+                title={cat.spent > 0 ? "See transactions" : ""}
+              >
                 <div className="flex justify-between items-center mb-1">
                   <div className="flex items-center gap-2">
                     <span className="text-[15px]">{cat.emoji}</span>
@@ -231,6 +237,47 @@ export default function DashboardPage() {
           })
         )}
       </div>
+
+      {/* Category drill-down modal */}
+      {drillCat && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+          onClick={() => setDrillCat(null)}
+        >
+          <div
+            className="bg-bf-surface border border-white/[0.08] rounded-2xl p-6 w-full max-w-[440px] animate-fade-up max-h-[70vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xl">{drillCat.emoji}</span>
+              <h3 className="text-lg font-bold">{drillCat.name}</h3>
+            </div>
+            <div className="text-sm font-mono mt-1 mb-4">
+              <span className="font-bold">{fmt(drillCat.spent)}</span>
+              <span className="text-bf-dim"> of {fmt(parseFloat(drillCat.budget || 0))} · {mkLabel(selMonth)}</span>
+            </div>
+            {sTxs
+              .filter((t) => t.category_id === drillCat.id)
+              .map((tx) => (
+                <div key={tx.id} className="flex items-center py-2 border-b border-white/[0.04]">
+                  <div className="flex-1">
+                    <div className="text-[13px]">{tx.description}</div>
+                    <div className="text-[10px] text-bf-dim">{tx.date}</div>
+                  </div>
+                  <span className="text-[13px] font-semibold text-bf-accent2 font-mono">
+                    -{fmt(parseFloat(tx.amount))}
+                  </span>
+                </div>
+              ))}
+            <button
+              onClick={() => setDrillCat(null)}
+              className="mt-5 bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-2 text-sm text-bf-dim hover:text-bf-text hover:bg-white/[0.08] transition w-full"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
